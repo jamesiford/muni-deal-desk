@@ -30,7 +30,7 @@ def _azd_env_file() -> Path | None:
 
     try:
         default_env = json.loads(config.read_text(encoding="utf-8")).get("defaultEnvironment")
-    except (OSError, json.JSONDecodeError):
+    except OSError, json.JSONDecodeError:
         return None
 
     if not default_env:
