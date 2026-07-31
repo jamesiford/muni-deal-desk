@@ -120,6 +120,12 @@ resource project 'Microsoft.CognitiveServices/accounts/projects@2025-04-01-previ
     description: projectDescription
     displayName: projectDisplayName
   }
+  // Project creation and model deployment are both write operations against the same
+  // account. Without an explicit dependency Bicep runs them concurrently and the
+  // project fails with RequestConflict, because the account is still settling.
+  dependsOn: [
+    deployments
+  ]
 
   resource searchConnection 'connections@2025-04-01-preview' = {
     name: searchServiceName
