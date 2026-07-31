@@ -159,7 +159,29 @@ numbers rather than asserted.
 - Thresholds fail the build when deliberately degraded
 - Two-model comparison produces a defensible cost and quality delta
 
-## Phase 8 — Copilot Studio surface
+## Phase 8 — Front door application
+
+**Depends on:** 6
+
+React and Vite in plain JSX, served by an async FastAPI backend streaming over SSE.
+Part one of the walkthrough: the banker-facing experience, before anything is revealed
+about the platform underneath.
+
+Carries an identity switcher between a public-side analyst and a deal-team member, so
+the same question asked twice returns different evidence with an explicit disclosure
+that results were withheld.
+
+Presentation only. No business logic: it posts a question and an identity, and renders
+streamed events. See ADR-0004 for the event contract.
+
+**Exit criteria**
+
+- Question submitted, stages stream, draft renders with citations
+- Identity switch visibly changes the evidence and discloses the withheld count
+- A guardrail violation surfaces as a blocked draft, not a silent edit
+- Runs locally against the deployed backend without a container build
+
+## Phase 9 — Copilot Studio surface
 
 **Depends on:** 6
 **First candidate for cutting**
@@ -172,13 +194,13 @@ specifically by the account team, and slide 14 of the deck promises it.
 - Agent reachable from Copilot Studio
 - A question asked in Teams returns a cited answer
 
-## Phase 9 — Runbook and rehearsal
+## Phase 10 — Runbook and rehearsal
 
-**Depends on:** 6, 7
+**Depends on:** 6, 7, 8
 
-`docs/demo-runbook.md` with a minute-by-minute script for the 15-minute demo, and
-`docs/portal-walkthrough.md` for the under-the-hood tour, each step mapped to the
-capability it proves and the exact portal blade to open.
+`docs/demo-runbook.md` covering the three-part walkthrough: front door application,
+Azure portal resource discovery, then the Foundry portal explored left to right with
+the bulk of the time.
 
 **Exit criteria**
 
@@ -186,26 +208,28 @@ capability it proves and the exact portal blade to open.
 - Every portal artifact referenced actually loads
 - Timing fits the slot with margin
 
-## Phase 10 — Fallback recording
+## Phase 11 — Fallback recording
 
-**Depends on:** 9
+**Depends on:** 10
 
-Screen recording of the full demo. The deck's slide 21 speaker notes already call for
+Screen recording of the full walkthrough. The deck's speaker notes already call for
 this. A live Foundry demo on a Monday morning without a fallback is an avoidable risk.
 
 **Exit criteria**
 
-- Recording covers demo and portal walkthrough
+- Recording covers all three parts
 - Stored somewhere reachable without VPN
 
 ## What to cut, in order
 
-1. **Copilot Studio surface (Phase 8).** Costs the slide 14 promise. Mitigate by
-   showing the published agent endpoint instead.
+1. **Copilot Studio surface (Phase 9).** Costs a slide promise. Mitigate by showing the
+   published agent endpoint instead.
 2. **The optional A2A aside.** Never on the critical path.
 3. **Two-model evaluation comparison.** Keep single-model evals; assert the tradeoff
    from the model catalogue instead of measuring it.
-4. **Content Understanding (Phase 3).** Fall back to Search-only. Costs the structured
+4. **Front door application (Phase 8).** Falls back to the Foundry playground. Costs the
+   three-part structure, which is why it is cut after Copilot Studio rather than before.
+5. **Content Understanding (Phase 3).** Fall back to Search-only. Costs the structured
    comparables table and weakens the calculator's inputs. Last resort.
 
 Do not cut: the guardrail refusal, the entitlement contrast, or the trace view. Those
