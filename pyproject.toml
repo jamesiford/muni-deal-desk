@@ -1,0 +1,53 @@
+[project]
+name = "muni-deal-desk"
+version = "0.1.0"
+description = "Microsoft Foundry L200 demo: municipal new-issue Deal Desk agent"
+requires-python = ">=3.14"
+
+dependencies = [
+    "azure-ai-projects==2.4.0",
+    "azure-identity==1.25.3",
+    "azure-search-documents==11.7.0b2",
+    "azure-ai-contentunderstanding==1.0.1",
+    "azure-ai-evaluation==1.16.2",
+    "azure-monitor-opentelemetry==1.8.8",
+    "agent-framework==1.8.0",
+    "agent-framework-foundry==1.8.0",
+    "mcp==1.26.0",
+    "pydantic==2.13.0",
+    "pydantic-settings==2.13.1",
+    "reportlab>=4.2.0",
+]
+
+[project.optional-dependencies]
+# Prerelease. Pinned and isolated so a fallback to a container host does not
+# require touching the core dependency set. See docs/decisions/0002-hosted-workflow-agent.md
+hosting = ["agent-framework-foundry-hosting==1.0.0a260604"]
+dev = ["pytest==9.0.2", "pytest-asyncio==1.3.0", "ruff>=0.9.0"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py314"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "B", "SIM", "RUF", "ANN", "D"]
+ignore = [
+    "D203",    # incompatible with D211
+    "D213",    # incompatible with D212
+    "ANN401",  # Any is required by mediator dispatch signatures
+    "D107",    # constructors here only assign injected dependencies; a docstring
+               # restating the signature is the noise this repo's rules forbid
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["D", "ANN"]
+"src/corpus/**" = ["D103"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+pythonpath = ["src"]

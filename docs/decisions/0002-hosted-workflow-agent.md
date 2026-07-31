@@ -1,0 +1,75 @@
+# 2. Hosting the orchestrator as an Agent Framework workflow agent
+
+Date: 2026-07-31
+Status: Accepted
+
+## Context
+
+The session must show two things that pull in different directions: agents that are
+viewable and editable in the Microsoft Foundry portal, and pro-code multi-agent
+orchestration that is only honestly shown in source.
+
+Microsoft Agent Framework workflows run anywhere, but a workflow only appears as an
+agent in the Foundry portal when it is hosted through the agent server bridge.
+
+## Decision
+
+Two agent kinds.
+
+The Research, Analyst and Compliance specialists are **prompt agents**, registered with
+`azure-ai-projects` 2.4.0 using `PromptAgentDefinition` and `create_version`. They are
+versioned in the project and therefore individually viewable, editable and testable in
+the portal.
+
+The Deal Desk orchestrator is a **Microsoft Agent Framework workflow** converted with
+`.as_agent()` and hosted via `agent_framework_foundry_hosting.InvocationsHostServer`.
+
+Internal specialist communication uses workflow edges carrying Pydantic contracts from
+`domain/contracts`. A2A is not used for internal wiring.
+
+The Invocations protocol is chosen over Responses for the orchestrator.
+
+## Prerelease dependency
+
+`agent-framework-foundry-hosting` is pinned at `1.0.0a260604`, an alpha release. The
+repository rules require an exact version, a limitation, a fallback and a validation
+step for any prerelease dependency.
+
+**Exact version:** `agent-framework-foundry-hosting==1.0.0a260604`, isolated in the
+`hosting` optional dependency group so the core dependency set is unaffected by a
+change to the hosting path.
+
+**Limitation:** The published Agent Framework sample for hosted agents imports
+`azure.ai.agentserver.agentframework`. That distribution is not available on PyPI as of
+2026-07-31; `pip index versions azure-ai-agentserver-agentframework` returns no
+matching distribution. `agent-framework-foundry-hosting` supersedes it and exposes
+`InvocationsHostServer` and `ResponsesHostServer`. Sample code found online will not
+run unmodified.
+
+**Fallback:** If the alpha host proves unstable, the orchestrator is deployed as a
+container agent (`kind: container` in `agent.yaml`) running the same workflow behind a
+hand-written ASGI endpoint. The workflow itself, the handlers and the contracts are
+unchanged, because hosting concerns are confined to `hosts/orchestrator`. The demo
+loses portal-native hosted-agent presentation but retains tracing and evaluation.
+
+**Validation:** `tests/integration` must show the hosted orchestrator responding to an
+invocation and emitting a trace visible in the Foundry portal before this decision is
+treated as proven. Until that test passes, the hosted path is not described as working.
+
+## Consequences
+
+The session can open a specialist in the portal, edit its instructions, run it in the
+playground, then switch to VS Code and show the workflow that composes all three. That
+is the intended "both surfaces" narrative.
+
+Rejecting A2A for internal wiring is a deliberate accuracy choice. Agent Framework's
+A2A support is client-side: `A2AAgent` wraps an externally hosted endpoint discovered
+through an AgentCard at `/.well-known/agent.json`. Using it between co-located
+specialists would add network hops and failure modes to a live demo while
+misrepresenting what the protocol is for. A2A may still be demonstrated as an optional
+aside by exposing the Compliance specialist as an external endpoint, off the critical
+path.
+
+Invocations is chosen over Responses because it supports websocket transport, SSE
+keepalive and invocation cancellation, which suit a multi-agent run lasting longer than
+a single request-response cycle.

@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+
+# Azure Developer CLI - contains environment-specific values and endpoints
+.azure/
+
+# Environment files - may contain endpoints, ids or secrets
+.env
+.env.*
+!.env.example
+
+# Generated corpus artifacts (regenerate with scripts/generate_corpus.ps1)
+src/corpus/out/
+
+# Evaluation run output
+evals/results/
+
+# Local tooling
+.vscode/
+*.log

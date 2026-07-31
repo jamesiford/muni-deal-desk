@@ -1,0 +1,148 @@
+# GitHub Copilot Repository Instructions
+
+## Purpose
+
+Build a Microsoft Foundry L200 demonstration solution for a customer technical session:
+a municipal new-issue **Deal Desk** agent for a public finance broker-dealer desk.
+
+The solution exists to make Foundry platform capabilities *visible and explainable*.
+Every capability below must have a corresponding artifact a presenter can open and
+narrate in the Microsoft Foundry portal, and equivalent source a presenter can open in
+VS Code:
+
+Agents, MCP, Foundry IQ, Evaluations, Observability, Tracing, Model choice, Tools,
+Governance, Guardrails.
+
+## Presentation constraint (drives design)
+
+This is a demo asset. Two rules follow from that and outrank convenience:
+
+1. **Portal-visible artifacts.** Prefer implementations that register a durable,
+   inspectable artifact in the Foundry portal (agent versions, knowledge bases,
+   evaluation runs, traces, connections, analyzers) over implementations that only
+   exist at runtime or only in code.
+2. **Readable on a projector.** Code shown on stage must be short, well named, and
+   commented with intent rather than mechanics. Prefer a hand-rolled 60-line mediator
+   that can be read aloud over a dependency that cannot.
+
+Neither rule permits inventing capabilities or overstating what a component proves.
+
+## Architecture
+
+Clean Architecture with strict inward-pointing dependencies. SOLID throughout. DRY:
+a rule or calculation is defined once and reached from every surface that needs it.
+
+```
+src/
+  domain/          no dependencies on other layers or on Azure SDKs
+  application/     depends on domain only; defines ports and message handlers
+  infrastructure/  implements application ports; owns all Azure SDK usage
+  hosts/           composition roots only; wiring, no business logic
+```
+
+Dependency rule: `hosts -> infrastructure -> application -> domain`. Never the reverse.
+`domain` and `application` must remain importable without Azure credentials so unit
+tests run offline.
+
+### Mediator
+
+Application use cases are dispatched through a small hand-rolled mediator
+(`application/mediator.py`). Handlers register by message type. This keeps hosts
+decoupled from handlers and lets the MCP server and the orchestrator invoke the same
+handler without duplication.
+
+Do not add a third-party mediator dependency.
+
+### Ports
+
+All outbound dependencies are expressed as Protocol interfaces in
+`application/ports/`. Infrastructure adapters implement them. Handlers depend on the
+Protocol, never on a concrete adapter, and never import from `infrastructure`.
+
+## Agent topology
+
+Two agent kinds, deliberately, so the session can show both build surfaces:
+
+- **Prompt agents** (`azure-ai-projects`, `PromptAgentDefinition` + `create_version`):
+  the Research, Analyst and Compliance specialists. Registered as versioned agents so
+  they are individually viewable, editable and testable in the Foundry portal.
+- **Hosted workflow agent** (Microsoft Agent Framework): the Deal Desk orchestrator.
+  A MAF workflow converted with `.as_agent()` and hosted via
+  `agent_framework_foundry_hosting.InvocationsHostServer`.
+
+Use the **Invocations** protocol for the orchestrator (websocket, SSE keepalive and
+cancellation support suit a multi-minute multi-agent run).
+
+Agent-to-agent communication inside the workflow uses MAF workflow edges with typed
+Pydantic messages. Do not use A2A for internal specialist wiring: MAF's A2A support is
+client-side, intended for consuming externally hosted agents. A2A may be used only for
+an optional, non-critical-path demonstration of protocol interop.
+
+## Structured I/O
+
+Every specialist-to-orchestrator handoff uses a Pydantic model from
+`domain/contracts/` as `response_format`. Untyped free-text handoffs are not
+acceptable. The same contract objects are asserted against by the evaluation suite.
+
+## Data rules
+
+- **Synthetic data only.** The corpus is generated, not collected.
+- **Never scrape, crawl, bulk-download, OCR or otherwise automate access to MSRB EMMA.**
+  The MSRB Website Terms of Use (updated 2 January 2026) expressly prohibit automated
+  access, database creation from its content, and OCR of imaged documents. Corpus
+  documents imitate the *structure* of public finance documents; they contain no
+  content retrieved from EMMA.
+- Do not use real issuer names in a way that implies real financial data. Synthetic
+  issuers must be clearly fictional.
+- The corpus deliberately contains planted contradictions, gaps and stale disclosures so
+  groundedness scoring and guardrails fire deterministically on every run.
+
+## Security rules
+
+- Never commit secrets, tokens, certificates, API keys, or credential-bearing
+  connection strings. No generated local environment files.
+- Use managed identity and Microsoft Entra authentication wherever supported.
+- Keep deployment, Foundry project, agent runtime and MCP runtime identities distinct.
+- Grant runtime identities only what they need, at the narrowest practical scope.
+- Do not grant runtime identities `Owner` or `Contributor`.
+- End users receive `Foundry Agent Consumer` at individual-agent scope where possible.
+  Do not grant end users `Foundry User`, `Contributor` or `Owner`.
+
+## Accuracy rules
+
+These exist because the audience is a regulated financial institution and the presenter
+must not overstate the platform.
+
+- **Do not claim per-user permission enforcement that is not implemented.** This
+  solution implements ACL-aware retrieval by passing group claims as a query-time
+  filter. That is not the same as end-to-end on-behalf-of enforcement. Documentation and
+  narration must state the difference. See `docs/guardrails.md`.
+- Do not describe a component as working until its validation exists and passes.
+- Preview and prerelease dependencies are permitted only with the exact version,
+  the limitation, a fallback, and a validation step documented in
+  `docs/decisions/`. `agent-framework-foundry-hosting` is prerelease and requires this.
+- Regulatory references (MSRB Rule G-17, MSRB Rule G-42, FINRA Regulatory Notice 24-09)
+  must be described accurately and must not be paraphrased into legal advice. Guardrails
+  are *modelled on* these obligations; the code does not certify compliance.
+
+## Engineering rules
+
+- Python 3.14. Azure Developer CLI and Bicep for infrastructure.
+- `from __future__ import annotations` in every module. Full type hints.
+- Format and lint with `ruff`. Line length 100.
+- Registration scripts must be idempotent: compare desired against current and update
+  rather than duplicate.
+- Keep Bicep modules syntactically valid and idempotent; compile after every edit.
+- Use `TODO` comments only for tenant-specific values, prerelease APIs, or steps
+  requiring manual validation.
+- Comment intent, not mechanics. Explain *why* a decision was made where it is not
+  obvious. Do not narrate what the next line plainly does.
+
+## Validation expectations
+
+- `ruff check` and `ruff format --check` pass.
+- `pytest tests/unit` passes without Azure credentials.
+- `az bicep build --file infra/main.bicep` compiles with no errors.
+- Scan for accidentally committed credentials before any push.
+- The evaluation gate in `.github/workflows/eval-gate.yml` must pass before an agent
+  version is promoted.
