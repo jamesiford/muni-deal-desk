@@ -1,0 +1,24 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/Azure/azure-dev/main/schemas/v1.0/azure.yaml.json
+name: muni-deal-desk
+metadata:
+  template: muni-deal-desk@0.1.0
+
+infra:
+  provider: bicep
+  path: infra
+  module: main
+
+# A single `azd up` provisions infrastructure and then completes the data-plane work:
+# corpus generation and upload, index and knowledge base creation, and agent
+# registration. Every hook is idempotent so re-running is safe.
+hooks:
+  preprovision:
+    shell: pwsh
+    run: ./scripts/preprovision.ps1
+    interactive: true
+    continueOnError: false
+  postprovision:
+    shell: pwsh
+    run: ./scripts/postprovision.ps1
+    interactive: true
+    continueOnError: false

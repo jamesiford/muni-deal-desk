@@ -1,0 +1,11 @@
+{
+  "resourcesResourceGroups": "rg-",
+  "cognitiveServicesAccounts": "aif-",
+  "searchSearchServices": "srch-",
+  "storageStorageAccounts": "st",
+  "operationalInsightsWorkspaces": "log-",
+  "insightsComponents": "appi-",
+  "appManagedEnvironments": "cae-",
+  "appContainerApps": "ca-",
+  "containerRegistryRegistries": "cr"
+}
