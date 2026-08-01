@@ -55,14 +55,22 @@ class _CorpusDocument:
     allowed_group_claims: tuple[str, ...] = ()
     defects: tuple[PlantedDefect, ...] = ()
     include_maturity_schedule: bool = False
+    include_yields: bool = False
 
 
 class _PdfDocument:
     """Small PDF writer whose explicit pagination makes manifest page counts reliable."""
 
-    def __init__(self, path: Path, title: str, sensitivity: Sensitivity) -> None:
+    def __init__(
+        self,
+        path: Path,
+        title: str,
+        document_type: DocumentType,
+        sensitivity: Sensitivity,
+    ) -> None:
         self._canvas = Canvas(str(path), pagesize=LETTER, pageCompression=1)
         self._title = title
+        self._document_type = document_type
         self._sensitivity = sensitivity
         self._width, self._height = LETTER
         self._left = 0.7 * inch
@@ -71,6 +79,11 @@ class _PdfDocument:
         self._bottom = 0.65 * inch
         self._y = self._top
         self.page_count = 1
+        self._canvas.setTitle(title)
+        self._canvas.setSubject(f"Synthetic municipal document; sensitivity={sensitivity.value}")
+        self._canvas.setKeywords(
+            ["synthetic", "municipal bonds", f"sensitivity:{sensitivity.value}"]
+        )
         self._draw_header()
 
     def _draw_header(self) -> None:
@@ -78,7 +91,13 @@ class _PdfDocument:
         self._canvas.rect(0, self._height - 0.35 * inch, self._width, 0.35 * inch, fill=1)
         self._canvas.setFillColor(colors.white)
         self._canvas.setFont("Helvetica-Bold", 8)
-        label = f"MUNICIPAL DEAL DESK | {self._sensitivity.value.upper()}"
+        labels = {
+            DocumentType.OFFICIAL_STATEMENT: "OFFICIAL STATEMENT",
+            DocumentType.CONTINUING_DISCLOSURE: "ANNUAL CONTINUING DISCLOSURE",
+            DocumentType.MATERIAL_EVENT_NOTICE: "MATERIAL EVENT NOTICE",
+            DocumentType.INTERNAL_PRICING_MEMO: "PRIVATE & CONFIDENTIAL | INTERNAL PRICING MEMO",
+        }
+        label = labels[self._document_type]
         self._canvas.drawString(self._left, self._height - 0.23 * inch, label)
         self._canvas.setFillColor(colors.black)
 
@@ -158,15 +177,29 @@ class _PdfDocument:
         self._canvas.setFillColor(colors.black)
         self._y -= 5
 
-    def maturity_schedule(self, maturities: list[MaturityTranche]) -> None:
-        self.heading("Serial Maturity Schedule")
-        headers = ("Maturity", "Principal", "Coupon", "Yield")
+    def maturity_schedule(
+        self,
+        maturities: list[MaturityTranche],
+        *,
+        heading: str,
+        include_yields: bool,
+    ) -> None:
+        self.heading(heading)
+        headers = (
+            ("Maturity", "Principal", "Coupon", "Yield")
+            if include_yields
+            else (
+                "Maturity",
+                "Principal",
+                "Coupon",
+            )
+        )
         x_positions = (
             self._left,
             self._left + 1.45 * inch,
             self._left + 3.25 * inch,
             self._left + 4.45 * inch,
-        )
+        )[: len(headers)]
         self._ensure_space(18)
         self._canvas.setFillColor(colors.HexColor("#123B54"))
         self._canvas.rect(self._left - 3, self._y - 4, self._right - self._left + 6, 15, fill=1)
@@ -182,7 +215,7 @@ class _PdfDocument:
                 f"${maturity.principal_amount:,.0f}",
                 f"{maturity.coupon_rate:.2f}%",
                 f"{maturity.yield_rate:.2f}%" if maturity.yield_rate is not None else "N/A",
-            )
+            )[: len(headers)]
             self._canvas.setFillColor(colors.black)
             self._canvas.setFont("Helvetica", 8)
             for x_position, value in zip(x_positions, values, strict=True):
@@ -379,8 +412,9 @@ def _official_statement_documents() -> list[_CorpusDocument]:
                 title=f"Official Statement - {issuer_name} - Series {dated_date.year}",
                 document_type=DocumentType.OFFICIAL_STATEMENT,
                 deal=deal,
-                include_maturity_schedule=True,
                 defects=tuple(defects),
+                include_maturity_schedule=True,
+                include_yields=True,
                 sections=(
                     _Section(
                         "Offering Summary",
@@ -422,6 +456,9 @@ def _related_document(
     sensitivity: Sensitivity = Sensitivity.PUBLIC,
     allowed_group_claims: tuple[str, ...] = (),
     defects: tuple[PlantedDefect, ...] = (),
+    deal_updates: dict[str, object] | None = None,
+    include_maturity_schedule: bool = False,
+    include_yields: bool = False,
 ) -> _CorpusDocument:
     issuer = source.deal.issuer.model_copy(
         update={
@@ -433,6 +470,7 @@ def _related_document(
             "issuer": issuer,
             "sensitivity": sensitivity,
             "source_document_id": document_id,
+            **(deal_updates or {}),
         }
     )
     return _CorpusDocument(
@@ -444,6 +482,8 @@ def _related_document(
         sensitivity=sensitivity,
         allowed_group_claims=allowed_group_claims,
         defects=defects,
+        include_maturity_schedule=include_maturity_schedule,
+        include_yields=include_yields,
     )
 
 
@@ -465,6 +505,13 @@ def _disclosure_documents(official_statements: list[_CorpusDocument]) -> list[_C
         document_type=DocumentType.CONTINUING_DISCLOSURE,
         enrollment=13_215,
         defects=(conflict,),
+        deal_updates={
+            "maturities": [
+                maturity.model_copy(update={"yield_rate": None})
+                for maturity in north_lantern.deal.maturities
+            ]
+        },
+        include_maturity_schedule=True,
         sections=(
             _Section(
                 "Annual Update",
@@ -491,6 +538,13 @@ def _disclosure_documents(official_statements: list[_CorpusDocument]) -> list[_C
         title="Annual Continuing Disclosure - Juniper Bend Fictional ISD - FY2025",
         document_type=DocumentType.CONTINUING_DISCLOSURE,
         defects=(late_defect,),
+        deal_updates={
+            "maturities": [
+                maturity.model_copy(update={"yield_rate": None})
+                for maturity in official_statements[3].deal.maturities
+            ]
+        },
+        include_maturity_schedule=True,
         sections=(
             _Section(
                 "Annual Update",
@@ -508,6 +562,17 @@ def _disclosure_documents(official_statements: list[_CorpusDocument]) -> list[_C
         document_id="ME-001",
         title="Material Event Notice - Cedar Prairie Fictional ISD",
         document_type=DocumentType.MATERIAL_EVENT_NOTICE,
+        deal_updates={
+            "issuer": official_statements[1].deal.issuer.model_copy(
+                update={
+                    "enrollment": None,
+                    "taxable_assessed_valuation": None,
+                }
+            ),
+            "first_maturity": None,
+            "call_provision": None,
+            "maturities": [],
+        },
         sections=(
             _Section(
                 "Event Notice",
@@ -534,6 +599,8 @@ def _pricing_memos(official_statements: list[_CorpusDocument]) -> list[_CorpusDo
                 document_type=DocumentType.INTERNAL_PRICING_MEMO,
                 sensitivity=Sensitivity.PRIVATE,
                 allowed_group_claims=(DEAL_TEAM_GROUP,),
+                include_maturity_schedule=True,
+                include_yields=True,
                 sections=(
                     _Section(
                         "Deal Team Pricing View",
@@ -553,37 +620,89 @@ def _pricing_memos(official_statements: list[_CorpusDocument]) -> list[_CorpusDo
     return documents
 
 
-def _deal_summary(deal: Deal) -> tuple[tuple[str, str], ...]:
-    call_value = "Not stated"
-    if deal.call_provision is not None and deal.call_provision.first_call_date is not None:
-        call_value = (
-            f"{deal.call_provision.first_call_date:%B %d, %Y} at "
-            f"{deal.call_provision.call_price:.2f}%"
-        )
-    return (
+def _issue_summary(deal: Deal, document_type: DocumentType) -> tuple[tuple[str, str], ...]:
+    values: list[tuple[str, str]] = [
         ("Issuer", deal.issuer.name),
+        ("State", deal.issuer.state),
+        ("County", deal.issuer.county or "Not stated"),
         ("Series", deal.series_name),
-        ("Security", "Unlimited Tax School Building Bonds"),
-        ("Par Amount", f"${deal.par_amount:,.0f}"),
+        ("Security", deal.security_type.value),
+        ("Original Par Amount", f"${deal.par_amount:,.0f}"),
         ("Dated Date", deal.dated_date.strftime("%B %d, %Y") if deal.dated_date else "N/A"),
-        ("Enrollment", f"{deal.issuer.enrollment:,}" if deal.issuer.enrollment else "N/A"),
-        ("Ratings", _ratings_text(deal.ratings)),
-        ("Call Provision", call_value),
+    ]
+    if deal.first_maturity is not None:
+        values.append(("First Maturity", deal.first_maturity.strftime("%B %d, %Y")))
+    if deal.final_maturity is not None:
+        values.append(("Final Maturity", deal.final_maturity.strftime("%B %d, %Y")))
+    if document_type is not DocumentType.MATERIAL_EVENT_NOTICE:
+        values.extend(
+            [
+                ("Enrollment", f"{deal.issuer.enrollment:,}" if deal.issuer.enrollment else "N/A"),
+                (
+                    "Taxable Assessed Valuation",
+                    (
+                        f"${deal.issuer.taxable_assessed_valuation:,.0f}"
+                        if deal.issuer.taxable_assessed_valuation is not None
+                        else "N/A"
+                    ),
+                ),
+            ]
+        )
+    if deal.ratings.moodys is not None:
+        values.append(("Moody's Rating", deal.ratings.moodys))
+    if deal.ratings.sp is not None:
+        values.append(("S&P Rating", deal.ratings.sp))
+    if deal.ratings.fitch is not None:
+        values.append(("Fitch Rating", deal.ratings.fitch))
+    values.append(
+        (
+            "Rating Enhancement",
+            "Yes - Texas Permanent School Fund" if deal.ratings.is_enhanced else "No",
+        )
     )
+    if deal.call_provision is not None and deal.call_provision.first_call_date is not None:
+        values.append(
+            (
+                "Optional Redemption",
+                f"{deal.call_provision.first_call_date:%B %d, %Y} at "
+                f"{deal.call_provision.call_price:.2f}%",
+            )
+        )
+    return tuple(values)
 
 
 def _render(document: _CorpusDocument, path: Path) -> int:
-    pdf = _PdfDocument(path, document.title, document.sensitivity)
+    pdf = _PdfDocument(
+        path,
+        document.title,
+        document.document_type,
+        document.sensitivity,
+    )
     pdf.title(document.title)
     pdf.paragraph(SYNTHETIC_NOTICE, emphasis=True)
-    pdf.heading("Document Ground Truth")
-    pdf.key_values(_deal_summary(document.deal))
+    summary_headings = {
+        DocumentType.OFFICIAL_STATEMENT: "Issue Summary",
+        DocumentType.CONTINUING_DISCLOSURE: "Outstanding Debt Summary",
+        DocumentType.MATERIAL_EVENT_NOTICE: "Affected Securities",
+        DocumentType.INTERNAL_PRICING_MEMO: "Comparable Issue Terms",
+    }
+    pdf.heading(summary_headings[document.document_type])
+    pdf.key_values(_issue_summary(document.deal, document.document_type))
     for section in document.sections:
         pdf.heading(section.heading)
         for paragraph in section.paragraphs:
             pdf.paragraph(paragraph)
     if document.include_maturity_schedule:
-        pdf.maturity_schedule(document.deal.maturities)
+        schedule_headings = {
+            DocumentType.OFFICIAL_STATEMENT: "Maturity Schedule",
+            DocumentType.CONTINUING_DISCLOSURE: "Outstanding Bonds by Maturity",
+            DocumentType.INTERNAL_PRICING_MEMO: "Comparable Scale",
+        }
+        pdf.maturity_schedule(
+            document.deal.maturities,
+            heading=schedule_headings[document.document_type],
+            include_yields=document.include_yields,
+        )
     return pdf.save()
 
 

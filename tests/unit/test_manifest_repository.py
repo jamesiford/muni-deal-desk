@@ -1,0 +1,67 @@
+"""Tests for deterministic manifest-backed deal lookup."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from datetime import date
+from decimal import Decimal
+from pathlib import Path
+
+from src.domain.entities.deal import SecurityType
+from src.infrastructure.manifest_repository import ManifestDealRepository
+
+DEAL_TEAM = "deal-team-private-side"
+
+
+@dataclass
+class Caller:
+    user_id: str
+    group_claims: tuple[str, ...]
+
+
+async def test_comparables_are_unique_and_report_private_sources() -> None:
+    repository = ManifestDealRepository(
+        Path("src/corpus/out/manifest.json"),
+        today=date(2026, 7, 31),
+    )
+
+    deals, withheld = await repository.find_comparables(
+        caller=Caller("public-user", ()),
+        state="TX",
+        security_type=SecurityType.UNLIMITED_TAX,
+        par_amount=Decimal("90000000"),
+        par_tolerance=Decimal("60000000"),
+        months_back=24,
+        limit=20,
+    )
+
+    assert len({deal.deal_id for deal in deals}) == len(deals)
+    assert withheld == 3
+
+
+async def test_deal_team_sees_no_withheld_source_records() -> None:
+    repository = ManifestDealRepository(
+        Path("src/corpus/out/manifest.json"),
+        today=date(2026, 7, 31),
+    )
+
+    _, withheld = await repository.find_comparables(
+        caller=Caller("deal-team-user", (DEAL_TEAM,)),
+        state="TX",
+        security_type=SecurityType.UNLIMITED_TAX,
+        par_amount=Decimal("90000000"),
+        par_tolerance=Decimal("60000000"),
+        months_back=24,
+        limit=20,
+    )
+
+    assert withheld == 0
+
+
+async def test_get_deal_returns_visible_public_record() -> None:
+    repository = ManifestDealRepository(Path("src/corpus/out/manifest.json"))
+
+    deal = await repository.get_deal("DEAL-001", Caller("public-user", ()))
+
+    assert deal is not None
+    assert deal.issuer.name == "Blue Mesa Fictional Independent School District"

@@ -43,6 +43,20 @@ read current state, compare against desired, update only on difference. Re-runni
 not create a duplicate version. Duplicate agent versions are visible in the portal and
 will be seen during the walkthrough.
 
+## Foundry IQ
+
+- The public corpus is one Blob knowledge source rooted at `pdf/public`.
+- Azure AI Search generates the source-specific data source, skillset, index and indexer.
+  Treat those as owned implementation details and never patch them except for the
+  documented private `executionEnvironment` setting required by the shared private link.
+- The knowledge base keeps `gpt-5.4-mini`, low retrieval reasoning, `extractiveData`, and
+  explicit retrieval instructions. Do not add answer instructions unless output mode is
+  deliberately changed back to answer synthesis.
+- Private pricing memos stay out of Blob IQ and are read from the synthetic manifest by
+  `ManifestDealRepository`.
+- Storage public access is disabled. Search reaches Blob through an approved shared
+  private link; local corpus upload uses the transient private uploader script.
+
 ## Prerelease dependencies
 
 `agent-framework-foundry-hosting` is alpha (`1.0.0a260604`). It is confined to

@@ -4,9 +4,9 @@ A Microsoft Foundry demonstration solution: a new-issue **Deal Desk** agent for 
 public finance broker-dealer desk.
 
 The solution exists to make Foundry platform capabilities visible and explainable in a
-customer technical session. Every capability has a corresponding artifact that can be
-opened in the Microsoft Foundry portal and equivalent source that can be opened in
-VS Code.
+customer technical session. Phases 1-4 are complete: infrastructure, synthetic corpus,
+Foundry IQ and MCP. Agents, orchestration and evaluations remain roadmap work and must
+not be presented as working until their validation passes.
 
 ## The scenario
 
@@ -23,18 +23,16 @@ a model switch, a compliance check and a human gate.
 
 ## Capability map
 
-| Capability | Where it appears |
-| --- | --- |
-| Agents | Three prompt-agent specialists plus a hosted workflow orchestrator |
-| Foundry IQ | One knowledge base over the corpus, with entitlement-filtered retrieval |
-| MCP | Custom server exposing the debt service calculator and deal lookup |
-| Tools | Calculator and lookup tools, reachable by agents |
-| Model choice | Extraction, reasoning and router deployments compared on cost and latency |
-| Guardrails | Deterministic conduct policies, plus content safety |
-| Evaluations | Graded golden set gating promotion in CI |
-| Tracing | Decomposition, retrieval, tool selection and model calls per interaction |
-| Observability | Cost attribution and continuous evaluation in the control plane |
-| Governance | Distinct agent identities, sensitivity labelling, entitlement-aware retrieval |
+| Capability | Status | Where it appears |
+| --- | --- | --- |
+| Foundry IQ | Complete | Blob-backed public PDF source with model-planned, extractive retrieval |
+| MCP and tools | Complete | ACA-hosted debt service, comparables and deal lookup tools |
+| Model choice | Deployed | Extraction, reasoning, router and embedding deployments |
+| Governance | Implemented for current paths | Source separation, sensitivity labels and withheld counts |
+| Guardrails | Domain policies implemented | End-to-end workflow gate remains Phase 6 |
+| Agents | Planned | Phase 5 prompt specialists and Phase 6 hosted orchestrator |
+| Evaluations | Planned | Phase 7 golden-set promotion gate |
+| Tracing and observability | MCP spans validated | Full workflow traces and continuous evaluation remain planned |
 
 ## Architecture
 
@@ -50,6 +48,18 @@ src/
 
 The MCP server and the orchestrator dispatch through the same mediator and resolve the
 same handler instances, so a calculation or a policy is implemented exactly once.
+
+The retrieval path has two deliberate sources:
+
+- `municipal-deal-pdf-blob-source` contains only public PDFs. Foundry IQ generates its
+  own Search data source, skillset, index and indexer, and the knowledge base returns
+  cited extractive data.
+- `ManifestDealRepository` reads typed corpus ground truth packaged with the runtime.
+  It filters the three private pricing records using caller group claims and reports the
+  number withheld.
+
+Keeping private records out of the public knowledge source makes the demo boundary easy
+to inspect. It is still application-level authorization, not on-behalf-of enforcement.
 
 See `docs/decisions/` for the reasoning behind the layering and the agent topology.
 
@@ -67,10 +77,10 @@ groundedness scoring and guardrails fire deterministically on every run.
 
 ## What this solution does not claim
 
-Retrieval is filtered using group claims passed at query time. That is ACL-aware
-retrieval, and it is not the same as end-to-end on-behalf-of enforcement. The
-distinction is documented in `docs/guardrails.md` and must be stated accurately when
-the solution is presented.
+Public narrative retrieval is isolated to public PDFs. Private structured records are
+filtered by the application using group claims passed with each message. That is not the
+same as end-to-end on-behalf-of enforcement. The distinction is documented in
+`docs/guardrails.md` and must be stated accurately when the solution is presented.
 
 The conduct policies are modelled on MSRB Rule G-17, MSRB Rule G-42 and FINRA
 Regulatory Notice 24-09. They do not certify compliance with any of them.
@@ -79,6 +89,7 @@ Regulatory Notice 24-09. They do not certify compliance with any of them.
 
 ```powershell
 python -m pip install -e ".[dev]"
+./scripts/generate_corpus.ps1
 python -m pytest tests/unit      # passes without Azure credentials
 python -m ruff check .
 ```
@@ -91,3 +102,5 @@ python -m ruff check .
 | Format | `python -m ruff format --check .` |
 | Unit tests | `python -m pytest tests/unit` |
 | Infrastructure | `az bicep build --file infra/main.bicep` |
+| Phase 3 cloud artifacts | `python -m scripts.setup_phase3 --validate-content-understanding` |
+| Deployed MCP | `python -m scripts.smoke_mcp $(azd env get-value MCP_ENDPOINT)` |

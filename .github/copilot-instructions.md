@@ -96,13 +96,31 @@ acceptable. The same contract objects are asserted against by the evaluation sui
   issuers must be clearly fictional.
 - The corpus deliberately contains planted contradictions, gaps and stale disclosures so
   groundedness scoring and guardrails fire deterministically on every run.
+- The Foundry IQ Blob knowledge source contains public PDFs only. Private pricing memos
+  must never be uploaded under its `pdf/public` prefix.
+
+## Retrieval topology
+
+- Foundry IQ uses one `AzureBlobKnowledgeSource` over public synthetic PDFs. Azure AI
+  Search owns the generated data source, skillset, index and indexer; do not edit or
+  create competing manual versions of those generated artifacts.
+- The knowledge base uses `gpt-5.4-mini` for low-effort query planning and returns
+  `extractiveData`. Retrieval instructions are populated; answer instructions are blank
+  because specialist agents, not the knowledge base, own synthesis.
+- Typed deal lookup and private-side comparables use the packaged corpus manifest through
+  `ManifestDealRepository`. It applies caller group claims in application code and
+  returns the number of private source records withheld.
+- Do not add a second hand-managed Search index for the same corpus. One portal-visible
+  Blob-generated index is deliberate and keeps the demonstration unambiguous.
 
 ## Security rules
 
 - Never commit secrets, tokens, certificates, API keys, or credential-bearing
   connection strings. No generated local environment files.
 - Use managed identity and Microsoft Entra authentication wherever supported.
-- Keep deployment, Foundry project, agent runtime and MCP runtime identities distinct.
+- Keep deployment, Foundry project, Search and workload identities distinct. The MCP
+  server and hosted orchestrator share one workload identity because they are the same
+  code trust boundary and require the same downstream access.
 - Grant runtime identities only what they need, at the narrowest practical scope.
 - Do not grant runtime identities `Owner` or `Contributor`.
 - End users receive `Foundry Agent Consumer` at individual-agent scope where possible.
@@ -113,10 +131,11 @@ acceptable. The same contract objects are asserted against by the evaluation sui
 These exist because the audience is a regulated financial institution and the presenter
 must not overstate the platform.
 
-- **Do not claim per-user permission enforcement that is not implemented.** This
-  solution implements ACL-aware retrieval by passing group claims as a query-time
-  filter. That is not the same as end-to-end on-behalf-of enforcement. Documentation and
-  narration must state the difference. See `docs/guardrails.md`.
+- **Do not claim per-user permission enforcement that is not implemented.** Public
+  narrative retrieval is physically separated into a public-only Blob knowledge source.
+  Private pricing records are filtered by `ManifestDealRepository` using caller group
+  claims in application code. Neither path is end-to-end on-behalf-of enforcement.
+  Documentation and narration must state the difference. See `docs/guardrails.md`.
 - Do not describe a component as working until its validation exists and passes.
 - Preview and prerelease dependencies are permitted only with the exact version,
   the limitation, a fallback, and a validation step documented in

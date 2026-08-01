@@ -14,6 +14,7 @@ dependencies = [
     "agent-framework==1.8.0",
     "agent-framework-foundry==1.8.0",
     "mcp==1.26.0",
+    "openai==2.31.0",
     "pydantic==2.13.0",
     "pydantic-settings==2.13.1",
     "reportlab>=4.2.0",

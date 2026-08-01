@@ -1,0 +1,11 @@
+**
+!scripts/
+!scripts/private_blob_uploader/
+!scripts/private_blob_uploader/upload.py
+!src/
+!src/corpus/
+!src/corpus/out/
+!src/corpus/out/os-*.pdf
+!src/corpus/out/cd-*.pdf
+!src/corpus/out/me-*.pdf
+!src/corpus/out/manifest.json

@@ -1,0 +1,13 @@
+.azure
+.git
+.github
+.pytest_cache
+.ruff_cache
+__pycache__
+corpus
+docs
+evals
+infra
+scripts
+tests
+*.pyc

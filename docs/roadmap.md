@@ -61,8 +61,9 @@ Entra authentication, the Search data plane is reachable, and a span is accepted
 Application Insights. All four checks pass.
 
 Role assignments confirmed at resource scope. The workload identity holds only
-`Search Index Data Reader`, `Cognitive Services OpenAI User`, `Storage Blob Data Reader`
-and `AcrPull`. No runtime identity holds `Owner` or `Contributor`.
+`Search Index Data Reader`, `Cognitive Services OpenAI User`,
+`Monitoring Metrics Publisher` and `AcrPull`. No runtime identity holds `Owner` or
+`Contributor`.
 
 ## Phase 2 — Synthetic corpus
 
@@ -98,23 +99,48 @@ the manifest. PDF render/text checks, Ruff and all 28 unit tests pass.
 
 ## Phase 3 — Extraction and knowledge base
 
+**Status:** complete
 **Depends on:** 1, 2
 
 Content Understanding analyzer extracting typed fields: par amount, security type,
-dated date, maturities, coupons, call provisions, ratings. Azure AI Search index with
-integrated vectorization for narrative chunks, plus filterable typed fields and an ACL
-field carrying group claims. Foundry IQ knowledge base over the index.
+dated date, maturities, coupons, call provisions, ratings. A Blob knowledge source over
+the public synthetic PDFs automatically generates the Azure AI Search data source,
+skillset, index and indexer shown in the portal. A model-backed Foundry IQ knowledge
+base orchestrates retrieval over that source. Private pricing memos remain outside the
+public knowledge source and are governed through the typed manifest repository.
 
-**Exit criteria**
+**Exit criteria — all met**
 
-- Extracted fields match the corpus manifest for every document
-- A query filtered by public-side claims returns strictly fewer results than the same
-  query with private-side claims
-- The knowledge base is visible in the Foundry portal and returns cited results
-- The withheld-result count is returned to the caller, not silently dropped
+- [x] Extracted fields match the corpus manifest for every document
+- [x] The public knowledge source contains no private documents, and typed retrieval
+   returns more source records with the private deal-team claim than without it
+- [x] The knowledge base is visible in the Foundry portal and returns cited results
+- [x] The withheld-result count is returned to the caller, not silently dropped
+
+**Validation (31 July 2026):** the durable Content Understanding analyzer extracted all
+14 documents and every typed `Deal` matched the manifest. The Blob knowledge source
+`municipal-deal-pdf-blob-source` ingested all 11 public PDFs through an approved Search
+shared private link and generated exactly one source-specific data source, skillset,
+index and indexer. The three private pricing memos never enter that source.
+
+The knowledge base `municipal-deal-knowledge-base` uses `gpt-5.4-mini`, low retrieval
+reasoning, extractive data output, and municipal-document routing instructions. The chat
+model performs query planning; specialist agents own synthesis, so answer instructions
+are intentionally blank. The knowledge base returned 11 cited references. The deployed
+MCP runtime uses the manifest for typed, ACL-aware comparables and reports three private
+source records withheld from public callers. The superseded `municipal-deal-chunks`
+index and index-backed knowledge source were deleted; only the Blob-generated index and
+Blob knowledge source remain.
+
+**Audit (31 July 2026):** a full Content Understanding validation again matched 14 of
+14 documents. Blob ingestion reports 11 processed and zero failed. The source, generated
+indexer and knowledge base are unchanged on a repeat run, and retrieval returns 11 cited
+references. Live Search inventory contains only the Blob source and its generated data
+source, skillset, index and indexer.
 
 ## Phase 4 — MCP server
 
+**Status:** complete
 **Depends on:** 1
 **Parallel with:** 3
 
@@ -122,12 +148,30 @@ MCP server exposing `compute_debt_service`, `find_comparables` and `get_deal`, a
 adapters over the existing application handlers. Containerised to Container Apps.
 Registered as a Foundry project connection.
 
-**Exit criteria**
+**Exit criteria — all met**
 
-- Tools callable over streamable HTTP
-- Tool list visible in the Foundry portal connection
-- `compute_debt_service` output matches `DebtServiceCalculator` unit test values
-- Server authenticates with managed identity, no keys
+- [x] Tools callable over streamable HTTP
+- [x] Tool list visible in the Foundry portal connection
+- [x] `compute_debt_service` output matches `DebtServiceCalculator` unit test values
+- [x] Server authenticates with managed identity, no keys
+
+**Validation (31 July 2026):** ACA revision
+`ca-mcp-wdrdcs6ulivnk--azd-1785554904` is healthy and serves streamable HTTP at
+`https://ca-mcp-wdrdcs6ulivnk.jollycoast-a8d3ffc7.westus3.azurecontainerapps.io/mcp`.
+All three tools returned structured output. `DEAL-001` debt service matched the
+deterministic calculator at $30,000,000 principal and $7,672,500 interest.
+
+The idempotent Foundry project connection `muni-deal-desk-mcp` is registered as a
+`RemoteTool`. Application Insights contains spans for all three MCP tools. The workload
+identity holds only `AcrPull`, Search read, model inference and telemetry
+publishing roles; it has no `Owner` or `Contributor` assignment.
+
+**Audit (31 July 2026):** `/status` returns `ready`; the endpoint lists all three tools;
+`DEAL-001` still matches the deterministic calculator; and `find_comparables` returns
+five typed deals, 11 Blob citations and three withheld private source records. The
+Foundry `RemoteTool` connection targets the live endpoint. Application Insights contains
+recent spans for all three tools. Runtime roles are exactly `AcrPull`, `Search Index Data
+Reader`, `Cognitive Services OpenAI User` and `Monitoring Metrics Publisher`.
 
 ## Phase 5 — Prompt agents
 
@@ -267,7 +311,7 @@ Full detail in `.github/copilot-instructions.md`. The ones most often violated u
 time pressure:
 
 - Synthetic data only; never automate access to EMMA
-- Never claim on-behalf-of enforcement; this is ACL-aware retrieval with query-time
-  group claims
+- Never claim on-behalf-of enforcement; public documents are source-isolated and private
+   manifest records are filtered in application code using group claims
 - No figure reaching a client document originates from a language model
 - Do not describe a component as working before its validation passes

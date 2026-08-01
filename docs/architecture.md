@@ -11,8 +11,10 @@ Provisioned by `azd up` into `westus3`, subscription `non-production Azure subsc
 | `gpt-5.5` | Comparables synthesis and drafting — the reasoning tier |
 | `model-router` | Per-request model selection |
 | `text-embedding-3-large` | Knowledge base embeddings |
-| Azure AI Search (Standard, semantic ranking) | Index behind the Foundry IQ knowledge base |
-| Storage account | Synthetic corpus documents |
+| Azure AI Search (Standard) | Blob knowledge source, generated ingestion pipeline and knowledge base |
+| Storage account | Public synthetic PDFs; public network access disabled |
+| Azure Container Apps and ACR | Hosts and packages the streamable HTTP MCP server |
+| User-assigned managed identity | Runtime Search/model access, telemetry and ACR pull |
 | Application Insights and Log Analytics | Traces, token usage and evaluation telemetry |
 
 Region note: the first deployment attempt targeted `eastus2` and failed with
@@ -29,6 +31,26 @@ hosts  ->  infrastructure  ->  application  ->  domain
 The MCP server and the workflow orchestrator dispatch through the same mediator and
 resolve the same handler instances, so a calculation or a conduct policy is implemented
 once and behaves identically on both surfaces.
+
+## Retrieval paths
+
+```text
+Public PDFs in Blob -> Blob knowledge source -> generated Search pipeline
+                    -> model-backed knowledge base -> cited extractive data
+
+Generated manifest -> ManifestDealRepository -> typed deals and private-record filtering
+
+Both paths -> application handler -> MCP tool / orchestrator
+```
+
+The public Blob source contains 11 official statements, continuing disclosures and event
+notices. It excludes the three private pricing memos. The knowledge base uses
+`gpt-5.4-mini` for low-effort query planning, returns `extractiveData`, and leaves
+synthesis to the specialist agents.
+
+The manifest repository supplies typed fields for deterministic comparables and applies
+caller group claims to private pricing records. A public caller receives the same public
+knowledge-base citations but fewer typed source records, plus an explicit withheld count.
 
 ## Where numbers come from
 
@@ -51,11 +73,13 @@ adds failure modes that a fixed-date demonstration cannot absorb. For a regulate
 customer evaluating production topology, bring-your-own Cosmos is the relevant option
 and belongs in a scoping conversation rather than in this environment.
 
-## Identity and access
+## Identity, network and access
 
-Public network access with Microsoft Entra authentication. `disableLocalAuth` is set on
-the Foundry account, so no API keys exist. Storage has `allowSharedKeyAccess` disabled
-for the same reason.
+Interactive demo surfaces use public endpoints with Microsoft Entra authentication.
+`disableLocalAuth` is set on the Foundry account, so no API keys exist. Storage has both
+shared-key and public-network access disabled. Azure AI Search reaches Blob through an
+approved Search-managed shared private link. Corpus seeding uses a transient VNet/private
+endpoint uploader that is deleted after upload.
 
 Access is controlled by role assignment at the narrowest practical scope. No runtime
 identity holds `Owner` or `Contributor`.
@@ -63,7 +87,8 @@ identity holds `Owner` or `Contributor`.
 | Principal | Roles |
 | --- | --- |
 | Foundry project identity | Search Index Data Contributor, Search Service Contributor, Storage Blob Data Reader |
-| Search identity | Storage Blob Data Reader, Cognitive Services OpenAI User |
+| Search identity | Storage Blob Data Reader, Cognitive Services OpenAI User, Cognitive Services User |
+| MCP/orchestrator workload identity | Search Index Data Reader, Cognitive Services OpenAI User, Monitoring Metrics Publisher, AcrPull |
 | Developer identity | Azure AI Developer, Cognitive Services User and OpenAI User, Search data and service contributor, Storage Blob Data Contributor |
 
 This posture suits a demonstration presented from a laptop. It is not a production
@@ -75,5 +100,8 @@ landing zone pattern and must not be presented as one. See
 - All four model deployments report `Succeeded`
 - Chat completions return from `gpt-5.4-mini` and `gpt-5.5` using Entra auth with no keys
 - Azure AI Search data plane is reachable with Entra auth
+- Blob knowledge source processed 11 public PDFs with zero failures
+- Knowledge base returns 11 citations with extractive output
+- MCP endpoint lists and calls all three tools over streamable HTTP
 - `az bicep build --file infra/main.bicep` compiles with no errors
 - `azd provision` is idempotent across repeated runs

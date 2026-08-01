@@ -69,11 +69,6 @@ class Settings(BaseSettings):
         default="",
     )
 
-    # Index and knowledge base names are fixed rather than derived, so the portal
-    # walkthrough always finds the same artifacts.
-    search_index_name: str = "muni-corpus"
-    knowledge_base_name: str = "muni-deal-desk-kb"
-
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:

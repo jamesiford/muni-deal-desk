@@ -8,6 +8,16 @@ infra:
   path: infra
   module: main
 
+services:
+  mcp:
+    project: .
+    language: docker
+    host: containerapp
+    docker:
+      path: ./src/hosts/mcp_server/Dockerfile
+      context: .
+      remoteBuild: true
+
 # A single `azd up` provisions infrastructure and then completes the data-plane work:
 # corpus generation and upload, index and knowledge base creation, and agent
 # registration. Every hook is idempotent so re-running is safe.
@@ -20,5 +30,10 @@ hooks:
   postprovision:
     shell: pwsh
     run: ./scripts/postprovision.ps1
+    interactive: true
+    continueOnError: false
+  postdeploy:
+    shell: pwsh
+    run: ./scripts/register_mcp_connection.ps1 -Environment $env:AZURE_ENV_NAME
     interactive: true
     continueOnError: false

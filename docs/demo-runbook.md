@@ -6,6 +6,11 @@ Three parts. The application first so the audience sees a working thing, the Azu
 portal briefly so they know what was deployed, then the Foundry portal for the bulk of
 the time.
 
+> **Target-state runbook.** Infrastructure, corpus, Foundry IQ and MCP steps are
+> validated. Application, specialist-agent, orchestrator and evaluation steps remain
+> roadmap work. Do not use this runbook for rehearsal until their phase exit criteria
+> pass.
+
 **Portal navigation verified 31 July 2026** against the deployed project. The new
 Foundry experience uses a top navigation of **Home, Discover, Build, Operate, Docs**,
 which is itself a left-to-right walk. Everything below follows that order.
@@ -62,9 +67,10 @@ instead. That is a design decision, and I will show you where it is enforced."*
 public-side analyst. Ask the same question. Fewer comparables return, the internal
 pricing memos are gone, and the answer discloses that results were withheld.
 
-Say: *"Same question, same agent, same knowledge base. Different evidence, because the
-caller is different — and it tells you it is partial rather than quietly answering with
-less."*
+Say: *"Same question and same agent. Public citations come from the public knowledge
+source; private pricing records are a separate governed source. The application filters
+those records for this caller and tells you the answer is partial rather than quietly
+answering with less."*
 
 **Moment three — the refusal.** Ask:
 
@@ -82,27 +88,30 @@ Do not explain how any of it works yet. That is the next hour.
 
 **Purpose:** short. Establish the footprint, then move on.
 
-Azure portal, resource group `rg-muni-deal-desk-demo`. Six resources:
+Azure portal, resource group `rg-muni-deal-desk-demo`. Focus on these resources:
 
 | Resource | Role |
 | --- | --- |
 | `aif-wdrdcs6ulivnk` | Foundry account and project |
 | `srch-wdrdcs6ulivnk` | Azure AI Search behind the knowledge base |
 | `stwdrdcs6ulivnk` | Corpus documents |
+| `ca-mcp-wdrdcs6ulivnk` / `cae-` / `cr-` | MCP app, Container Apps environment and registry |
+| `id-wdrdcs6ulivnk` | Shared MCP/orchestrator workload identity |
 | `appi-` / `log-` | Application Insights and Log Analytics |
 
 Two points worth making here and nowhere else:
 
-- The whole environment is one `azd up`. Infrastructure, role assignments, corpus,
-  index, knowledge base and agent registration.
+- The whole environment is one `azd up`. Infrastructure, role assignments, private
+      corpus upload, Blob knowledge source, knowledge base and MCP registration.
 - There are no keys. Local authentication is disabled on the Foundry account and shared
   key access is disabled on storage. Everything runs on Entra identity and role
   assignment.
 
-If asked about private networking: this environment is public-access with Entra auth
-because it is presented from a laptop. Production topology is private endpoints and VNet
-injection, and that is the reference architecture in the appendix. **Do not imply this
-deployment is a production pattern.**
+If asked about private networking: interactive surfaces are public with Entra auth so the
+demo works from a laptop. Blob Storage is private; Search uses a shared private link and
+the corpus uploader uses a transient private endpoint. A production topology would
+isolate the remaining surfaces as well. **Do not imply this hybrid deployment is a
+production pattern.**
 
 Move on within five minutes.
 
@@ -159,14 +168,16 @@ the debt service numbers are computed arithmetically, not generated. A model des
 the schedule; it does not produce it. That is the difference between a demo and
 something you could put in front of a client."*
 
-**Knowledge.** The Foundry IQ knowledge base over the corpus. This is where the
-entitlement contrast from Part 1 is explained.
+**Knowledge.** Open `municipal-deal-pdf-blob-source`. Show `kind: azureBlob`, the public
+`pdf/public` folder, and the generated data source, skillset, index and indexer. Then open
+`municipal-deal-knowledge-base`: `gpt-5.4-mini`, low reasoning, extractive data, and the
+retrieval instructions. Point out that answer instructions are blank because specialists
+own synthesis.
 
-Be precise here: *"Retrieval filters on group claims carried as a query-time filter
-against an ACL on each document. It is ACL-aware retrieval. It is not on-behalf-of
-enforcement — the agent queries under its own identity, and the application enforces the
-boundary. If you need the user's own token to reach the index, that is OBO, and it is a
-different design. I want to be exact about that."*
+Be precise here: *"The knowledge source contains public documents only. Private pricing
+records are kept in a separate typed repository and filtered in application code using
+caller group claims. The agent uses its own managed identity, so this is not
+on-behalf-of enforcement. OBO is a different, stronger design."*
 
 That precision will earn more credibility than the feature does.
 

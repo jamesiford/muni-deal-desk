@@ -23,6 +23,9 @@ param principalId string
 @allowed(['User', 'ServicePrincipal'])
 param principalType string = 'User'
 
+@description('True when the MCP Container App already exists, supplied by azd.')
+param mcpResourceExists bool = false
+
 @description('''
 Model deployments.
 
@@ -135,7 +138,21 @@ module containerApps 'modules/container-apps.bicep' = {
     registryName: '${abbrs.containerRegistryRegistries}${resourceToken}'
     environmentName: '${abbrs.appManagedEnvironments}${resourceToken}'
     identityName: '${abbrs.managedIdentityUserAssignedIdentities}${resourceToken}'
+    mcpAppName: 'ca-mcp-${resourceToken}'
+    mcpResourceExists: mcpResourceExists
     logAnalyticsId: monitoring.outputs.logAnalyticsId
+    accountEndpoint: foundry.outputs.accountEndpoint
+    projectEndpoint: foundry.outputs.projectEndpoint
+    extractionDeployment: modelDeployments[0].name
+    reasoningDeployment: modelDeployments[1].name
+    routerDeployment: modelDeployments[2].name
+    embeddingDeployment: modelDeployments[3].name
+    searchEndpoint: searchStorage.outputs.searchServiceEndpoint
+    searchConnectionName: foundry.outputs.searchConnectionName
+    storageAccountName: searchStorage.outputs.storageAccountName
+    storageBlobEndpoint: searchStorage.outputs.storageBlobEndpoint
+    corpusContainerName: searchStorage.outputs.corpusContainerName
+    applicationInsightsConnectionString: monitoring.outputs.applicationInsightsConnectionString
     tags: tags
   }
 }
@@ -152,6 +169,7 @@ module rbac 'modules/rbac.bicep' = {
     accountName: foundry.outputs.accountName
     searchServiceName: searchStorage.outputs.searchServiceName
     storageAccountName: searchStorage.outputs.storageAccountName
+    applicationInsightsName: monitoring.outputs.applicationInsightsName
   }
 }
 
@@ -180,3 +198,6 @@ output AZURE_CONTAINER_ENVIRONMENT_NAME string = containerApps.outputs.environme
 output AZURE_WORKLOAD_IDENTITY_ID string = containerApps.outputs.workloadIdentityId
 output AZURE_WORKLOAD_IDENTITY_CLIENT_ID string = containerApps.outputs.workloadIdentityClientId
 output APPLICATIONINSIGHTS_CONNECTION_STRING string = monitoring.outputs.applicationInsightsConnectionString
+output SERVICE_MCP_NAME string = containerApps.outputs.mcpAppName
+output SERVICE_MCP_URI string = containerApps.outputs.mcpUri
+output MCP_ENDPOINT string = '${containerApps.outputs.mcpUri}/mcp'

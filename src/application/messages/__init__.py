@@ -43,6 +43,14 @@ class ComputeDebtService:
 
 
 @dataclass(frozen=True, slots=True)
+class GetDeal:
+    """Fetch a deal the caller is entitled to see."""
+
+    caller: Caller
+    deal_id: str
+
+
+@dataclass(frozen=True, slots=True)
 class ReviewForCompliance:
     """Apply conduct policies to drafted text."""
 

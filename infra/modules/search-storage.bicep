@@ -55,7 +55,7 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
     // Entra authentication only. No account keys exist to be leaked or rotated.
     allowSharedKeyAccess: false
     minimumTlsVersion: 'TLS1_2'
-    publicNetworkAccess: 'Enabled'
+    publicNetworkAccess: 'Disabled'
     supportsHttpsTrafficOnly: true
   }
 }

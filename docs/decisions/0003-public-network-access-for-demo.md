@@ -1,4 +1,4 @@
-# 3. Public network access for the demonstration deployment
+# 3. Hybrid network access for the demonstration deployment
 
 Date: 2026-07-31
 Status: Accepted
@@ -21,18 +21,20 @@ contributed to a deployment failure requiring retry.
 
 ## Decision
 
-The demonstration deploys with public network access enabled and Entra authentication
-required. Local authentication keys are disabled on the Foundry account. Access is
-controlled by identity and role assignment, not by network boundary.
+Interactive demonstration surfaces deploy with public network access and required Entra
+authentication. Blob Storage is private: public and shared-key access are disabled,
+Azure AI Search uses a shared private link, and corpus seeding runs through a transient
+private endpoint.
 
-Private networking is **presented as architecture**, not deployed. The session already
-covers private endpoints, VNet injection and API Management as an AI gateway in its
-reference-architecture material.
+Broader private networking is **presented as production architecture**, not fully
+deployed. The session still covers VNet injection and API Management as an AI gateway in
+its reference-architecture material.
 
 ## Consequences
 
-The demonstration is reachable from any machine with the right identity, which removes
-the largest avoidable failure mode on the day.
+Interactive surfaces are reachable from any machine with the right identity, which
+removes the largest avoidable failure mode on the day. Corpus content remains behind a
+private storage endpoint.
 
 Provisioning is materially faster and has fewer moving parts, which matters against a
 fixed deadline.
@@ -46,6 +48,8 @@ financial institution would be a material misrepresentation.
 Mitigations that keep the posture defensible despite public access:
 
 - `disableLocalAuth: true` on the Foundry account; no API keys exist to leak.
+- `publicNetworkAccess: 'Disabled'` and `allowSharedKeyAccess: false` on storage.
+- An approved Search shared private link to the Blob subresource.
 - Managed identity for every service-to-service call.
 - Role assignments at the narrowest practical scope; no runtime identity holds `Owner`
   or `Contributor`.

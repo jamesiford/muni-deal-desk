@@ -13,6 +13,9 @@
     },
     "principalType": {
       "value": "${AZURE_PRINCIPAL_TYPE=User}"
+    },
+    "mcpResourceExists": {
+      "value": "${SERVICE_MCP_RESOURCE_EXISTS=false}"
     }
   }
 }

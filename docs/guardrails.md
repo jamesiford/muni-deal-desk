@@ -89,23 +89,28 @@ remove either.
 Say these plainly if asked. An architect audience will respect the precision, and a
 regulated customer will eventually discover any gap between claim and implementation.
 
-**Retrieval filtering is not on-behalf-of enforcement.** Entitlement filtering works by
-passing the caller's group claims as a query-time filter against an ACL field on each
-document. The agent queries Search under its own managed identity, not the user's.
+**Source separation and application filtering are not on-behalf-of enforcement.** The
+Foundry IQ knowledge source contains public PDFs only. Private pricing memos never enter
+that source. Typed private records are packaged in the corpus manifest, and
+`ManifestDealRepository` compares their allowed groups with the caller claims carried in
+the application message. The agent calls both Search and the repository under its own
+runtime identity, not the user's.
 
-That means the boundary is enforced *by the application*, correctly and consistently, but
-it is not the same as the user's own token reaching the data store. A defect in the
-application layer could bypass it; an on-behalf-of flow could not. Production designs that
-need the stronger property use OBO token exchange, or separate agents and knowledge bases
-per entitlement group.
+The public/private document boundary is physically inspectable, while access to private
+typed records is enforced *by the application*. Neither is the same as the user's own
+token reaching a data store. A defect in the application layer could bypass private
+record filtering; an on-behalf-of flow could not. Production designs that need the
+stronger property use OBO token exchange or separate agents and sources per entitlement
+group.
 
-The honest sentence: *"This is ACL-aware retrieval with query-time group claims. It is
-not on-behalf-of enforcement, and here is the difference."*
+The honest sentence: *"Public documents are isolated in the knowledge source; private
+pricing records are filtered in application code using group claims. It is not
+on-behalf-of enforcement, and here is the difference."*
 
-**ACL maintenance is the hard part, and it is generated here.** Document ACLs in this
-corpus are produced by the generator. In production, keeping them synchronised with the
-source system's permissions as documents and deal teams change is the substantial
-engineering problem, and it sits outside the platform.
+**Entitlement maintenance is the hard part, and it is generated here.** Allowed groups
+in this corpus are produced by the generator. In production, keeping private source
+records synchronised with the system of record as documents and deal teams change is the
+substantial engineering problem, and it sits outside the platform.
 
 **These policies do not certify compliance.** They are modelled on published obligations.
 They are not legal advice, they were not reviewed by counsel, and no regex is a

@@ -18,6 +18,9 @@ venv/
 # Generated corpus artifacts (regenerate with scripts/generate_corpus.ps1)
 src/corpus/out/
 
+# Generated Bicep ARM template
+infra/main.json
+
 # Evaluation run output
 evals/results/
 

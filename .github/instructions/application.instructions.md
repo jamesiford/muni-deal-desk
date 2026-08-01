@@ -28,8 +28,10 @@ Every message that reaches data carries a `Caller`. Do not read identity from am
 state, module-level context or environment variables. Passing it explicitly is what
 makes the permission boundary visible at each call site.
 
-When results are withheld by an entitlement filter, return the withheld count alongside
-the results. Never silently drop them: an answer that is partial must be able to say so.
+Public narrative retrieval and private structured records are separate sources. The Blob
+knowledge source contains public PDFs only. `ManifestDealRepository` applies caller group
+claims to private records. When records are withheld, return the count alongside the
+results. Never silently drop them: an answer that is partial must be able to say so.
 
 Do not distinguish "not found" from "not permitted" in an error surfaced to a caller.
 Confirming that a barred record exists is itself a disclosure across the information

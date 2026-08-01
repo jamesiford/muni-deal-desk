@@ -25,6 +25,9 @@ param searchServiceName string
 @description('Storage account name, used to scope role assignments.')
 param storageAccountName string
 
+@description('Application Insights name, used to scope telemetry ingestion.')
+param applicationInsightsName string
+
 // Built-in data-plane roles. Control-plane roles such as Owner and Contributor are
 // deliberately absent: no runtime identity in this solution needs to manage resources.
 var roles = {
@@ -36,6 +39,7 @@ var roles = {
   cognitiveServicesUser: 'a97b65f3-24c7-4388-baec-2e87135dc908'
   cognitiveServicesOpenAIUser: '5e0bd9bd-7b93-4f28-af87-19fc36ad61bd'
   azureAIDeveloper: '64702f94-c441-49e6-a78b-ef80e0188fee'
+  monitoringMetricsPublisher: '3913510d-42f4-4e42-8a64-420c390055eb'
 }
 
 resource account 'Microsoft.CognitiveServices/accounts@2025-04-01-preview' existing = {
@@ -48,6 +52,10 @@ resource searchService 'Microsoft.Search/searchServices@2024-06-01-preview' exis
 
 resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' existing = {
   name: storageAccountName
+}
+
+resource applicationInsights 'Microsoft.Insights/components@2020-02-02' existing = {
+  name: applicationInsightsName
 }
 
 // The Foundry project reads and writes indexes so agents can query the knowledge base.
@@ -118,6 +126,21 @@ resource searchOpenAIUser 'Microsoft.Authorization/roleAssignments@2022-04-01' =
   }
 }
 
+// Blob knowledge-source ingestion and knowledge-base query planning use the broader
+// Cognitive Services data-plane role documented for Foundry IQ model access.
+resource searchCognitiveServicesUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  scope: account
+  name: guid(account.id, searchPrincipalId, roles.cognitiveServicesUser)
+  properties: {
+    principalId: searchPrincipalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: subscriptionResourceId(
+      'Microsoft.Authorization/roleDefinitions',
+      roles.cognitiveServicesUser
+    )
+  }
+}
+
 // Container workloads read the index and call models. They never write to either, so
 // the reader roles are the correct pairing even though the developer identity holds
 // contributor rights for setup.
@@ -147,15 +170,15 @@ resource workloadOpenAIUser 'Microsoft.Authorization/roleAssignments@2022-04-01'
   }
 }
 
-resource workloadStorageReader 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  scope: storageAccount
-  name: guid(storageAccount.id, workloadPrincipalId, roles.storageBlobDataReader)
+resource workloadTelemetryPublisher 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  scope: applicationInsights
+  name: guid(applicationInsights.id, workloadPrincipalId, roles.monitoringMetricsPublisher)
   properties: {
     principalId: workloadPrincipalId
     principalType: 'ServicePrincipal'
     roleDefinitionId: subscriptionResourceId(
       'Microsoft.Authorization/roleDefinitions',
-      roles.storageBlobDataReader
+      roles.monitoringMetricsPublisher
     )
   }
 }

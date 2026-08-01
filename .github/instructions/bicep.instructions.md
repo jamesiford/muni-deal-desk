@@ -4,7 +4,7 @@ applyTo: "infra/**"
 
 # Infrastructure as code
 
-Bicep, orchestrated by Azure Developer CLI. Target region `eastus2`.
+Bicep, orchestrated by Azure Developer CLI. Target region `westus3`.
 
 ## Rules
 
@@ -23,8 +23,8 @@ Keep these principals distinct, and grant each only what it needs:
 | --- | --- |
 | Deployment identity | Resource creation only |
 | Foundry project identity | Its own dependencies and connections |
-| MCP runtime identity | Search read, model inference |
-| Search identity | Storage read, embedding model access |
+| MCP runtime identity | Search read, model inference, telemetry publishing, ACR pull |
+| Search identity | Storage read, embedding and query-planning model access |
 
 Do not grant `Owner` or `Contributor` to any runtime identity. Prefer built-in
 data-plane roles over control-plane roles.
@@ -37,10 +37,10 @@ Four, deliberately: `gpt-5.4-mini` for extraction, `gpt-5.5` for synthesis,
 The count matters for the demonstration. A single deployment renders the cost
 attribution panel as a flat line, which removes the reason to open it.
 
-Verify SKU availability in `eastus2` before adding a deployment:
+Verify SKU availability in `westus3` before adding a deployment:
 
 ```
-az cognitiveservices model list -l eastus2 --query "[?kind=='AIServices']" -o table
+az cognitiveservices model list -l westus3 --query "[?kind=='AIServices']" -o table
 ```
 
 ## Naming
