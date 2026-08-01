@@ -9,20 +9,19 @@ from __future__ import annotations
 from decimal import Decimal
 
 from src.application.messages import FindComparables
-from src.application.ports import DealRepositoryPort, KnowledgePort
-from src.domain.contracts.agent_contracts import ResearchFindings
+from src.application.ports import DealRepositoryPort
+from src.domain.contracts.agent_contracts import ComparableCandidates
 from src.domain.entities.citation import EvidenceGap
 
 
 class FindComparablesHandler:
-    """Selects comparable issues and reports what could not be found or seen."""
+    """Selects typed comparable issues without performing narrative retrieval."""
 
-    def __init__(self, deals: DealRepositoryPort, knowledge: KnowledgePort) -> None:
+    def __init__(self, deals: DealRepositoryPort) -> None:
         self._deals = deals
-        self._knowledge = knowledge
 
-    async def handle(self, message: FindComparables) -> ResearchFindings:
-        """Find comparables, gather supporting citations, and record gaps."""
+    async def handle(self, message: FindComparables) -> ComparableCandidates:
+        """Find entitled comparables and record typed-data gaps."""
         tolerance = message.par_amount * (message.par_tolerance_pct / Decimal("100"))
 
         deals, deals_withheld = await self._deals.find_comparables(
@@ -34,12 +33,6 @@ class FindComparablesHandler:
             months_back=message.months_back,
             limit=message.limit,
         )
-
-        query = (
-            f"{message.state} {message.security_type.value.replace('_', ' ')} "
-            f"new issue pricing and call features"
-        )
-        citations, citations_withheld = await self._knowledge.search(query, message.caller)
 
         gaps: list[EvidenceGap] = []
         if not deals:
@@ -62,9 +55,8 @@ class FindComparablesHandler:
                     )
                 )
 
-        return ResearchFindings(
+        return ComparableCandidates(
             comparables=deals,
-            citations=citations,
             gaps=gaps,
-            excluded_by_permission=deals_withheld + citations_withheld,
+            excluded_by_permission=deals_withheld,
         )

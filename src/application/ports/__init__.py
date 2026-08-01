@@ -8,11 +8,12 @@ without credentials.
 from __future__ import annotations
 
 from decimal import Decimal
-from typing import Protocol
+from typing import Protocol, TypeVar
 
 from src.domain.contracts.agent_contracts import ComplianceReview
-from src.domain.entities.citation import Citation
 from src.domain.entities.deal import Deal, DebtServiceSchedule, SecurityType
+
+TResponse = TypeVar("TResponse")
 
 
 class CallerContext(Protocol):
@@ -33,30 +34,11 @@ class CallerContext(Protocol):
         ...
 
 
-class KnowledgePort(Protocol):
-    """Grounded retrieval over the document corpus."""
-
-    async def search(
-        self,
-        query: str,
-        caller: CallerContext,
-        *,
-        top: int = 10,
-    ) -> tuple[list[Citation], int]:
-        """Retrieve supporting passages for a query.
-
-        Returns the passages the caller is entitled to see, and the count of matches
-        withheld by the entitlement filter. The withheld count is returned rather
-        than silently dropped so an answer can disclose that it is partial.
-        """
-        ...
-
-
 class DealRepositoryPort(Protocol):
     """Structured lookup over extracted deal records.
 
-    Separate from `KnowledgePort` because comparables selection filters and sorts on
-    typed fields, which semantic retrieval over text chunks cannot do reliably.
+    Comparables selection filters and sorts on typed fields, which semantic retrieval
+    over text chunks cannot do reliably.
     """
 
     async def find_comparables(
@@ -108,11 +90,25 @@ class AgentPort(Protocol):
         self,
         agent_name: str,
         prompt: str,
-        response_model: type,
+        response_model: type[TResponse],
         *,
         caller: CallerContext,
-    ) -> object:
+    ) -> TResponse:
         """Invoke a specialist and return an instance of `response_model`."""
+        ...
+
+
+class ModelPort(Protocol):
+    """Typed invocation of a Foundry model deployment."""
+
+    async def invoke(
+        self,
+        model: str,
+        instructions: str,
+        prompt: str,
+        response_model: type[TResponse],
+    ) -> TResponse:
+        """Run a model and validate its structured response."""
         ...
 
 

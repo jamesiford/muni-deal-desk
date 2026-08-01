@@ -71,6 +71,6 @@ The accepted deployment was validated by:
 - generated data source, skillset, index and indexer present under the source name
 - knowledge base returning 11 cited references
 - a second setup run reporting source, generated indexer and knowledge base unchanged
-- live MCP `find_comparables` returning five deals, 11 citations and three withheld
-  private source records
+- Research v2 completing direct `knowledge_base_retrieve` for cited public passages and
+  custom MCP `find_comparable_deals` for typed candidates and withheld private records
 - removal of the superseded manual index and index-backed knowledge source

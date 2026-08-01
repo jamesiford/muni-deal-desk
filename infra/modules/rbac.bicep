@@ -32,7 +32,6 @@ param applicationInsightsName string
 // deliberately absent: no runtime identity in this solution needs to manage resources.
 var roles = {
   searchIndexDataContributor: '8ebe5a00-799e-43f5-93ac-243d3dce84a7'
-  searchIndexDataReader: '1407120a-92aa-4202-b7e9-c0e197c71c8f'
   searchServiceContributor: '7ca78c08-252a-4471-8644-bb5ff32d4ba0'
   storageBlobDataContributor: 'ba92f5b4-2d11-453d-a403-e96b0029c9fe'
   storageBlobDataReader: '2a2b9908-6ea1-4ae2-8e65-a410df84e7d1'
@@ -137,35 +136,6 @@ resource searchCognitiveServicesUser 'Microsoft.Authorization/roleAssignments@20
     roleDefinitionId: subscriptionResourceId(
       'Microsoft.Authorization/roleDefinitions',
       roles.cognitiveServicesUser
-    )
-  }
-}
-
-// Container workloads read the index and call models. They never write to either, so
-// the reader roles are the correct pairing even though the developer identity holds
-// contributor rights for setup.
-resource workloadSearchReader 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  scope: searchService
-  name: guid(searchService.id, workloadPrincipalId, roles.searchIndexDataReader)
-  properties: {
-    principalId: workloadPrincipalId
-    principalType: 'ServicePrincipal'
-    roleDefinitionId: subscriptionResourceId(
-      'Microsoft.Authorization/roleDefinitions',
-      roles.searchIndexDataReader
-    )
-  }
-}
-
-resource workloadOpenAIUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  scope: account
-  name: guid(account.id, workloadPrincipalId, roles.cognitiveServicesOpenAIUser)
-  properties: {
-    principalId: workloadPrincipalId
-    principalType: 'ServicePrincipal'
-    roleDefinitionId: subscriptionResourceId(
-      'Microsoft.Authorization/roleDefinitions',
-      roles.cognitiveServicesOpenAIUser
     )
   }
 }

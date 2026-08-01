@@ -8,13 +8,10 @@ from pathlib import Path
 from typing import Protocol, cast
 
 from azure.core.credentials import TokenCredential
-from azure.search.documents.knowledgebases import KnowledgeBaseRetrievalClient
 
-from src.application.ports import DealRepositoryPort, KnowledgePort
+from src.application.ports import DealRepositoryPort
 from src.config import Settings
 from src.infrastructure.manifest_repository import ManifestDealRepository
-from src.infrastructure.search.constants import API_VERSION, KNOWLEDGE_BASE_NAME
-from src.infrastructure.search.knowledge_base import AzureBlobKnowledgeBaseAdapter
 
 
 @dataclass(frozen=True, slots=True)
@@ -22,7 +19,6 @@ class AdapterBundle:
     """Concrete data adapters shared by all MCP handlers."""
 
     deals: DealRepositoryPort
-    knowledge: KnowledgePort
 
 
 class AdapterFactory(Protocol):
@@ -33,22 +29,22 @@ class AdapterFactory(Protocol):
         ...
 
 
+def create_manifest_adapters(
+    credential: TokenCredential,
+    settings: Settings,
+) -> AdapterBundle:
+    """Build typed manifest lookup for the custom Deal Desk MCP server."""
+    del credential, settings
+    manifest_path = Path(__file__).resolve().parents[2] / "corpus" / "out" / "manifest.json"
+    return AdapterBundle(deals=ManifestDealRepository(manifest_path))
+
+
 def create_azure_search_adapters(
     credential: TokenCredential,
     settings: Settings,
 ) -> AdapterBundle:
-    """Build typed manifest lookup and Blob-backed knowledge retrieval adapters."""
-    manifest_path = Path(__file__).resolve().parents[2] / "corpus" / "out" / "manifest.json"
-    client = KnowledgeBaseRetrievalClient(
-        endpoint=settings.search_endpoint,
-        knowledge_base_name=KNOWLEDGE_BASE_NAME,
-        credential=credential,
-        api_version=API_VERSION,
-    )
-    return AdapterBundle(
-        deals=ManifestDealRepository(manifest_path),
-        knowledge=AzureBlobKnowledgeBaseAdapter(client),
-    )
+    """Retain the deployed factory path while rolling out the typed-only adapter."""
+    return create_manifest_adapters(credential, settings)
 
 
 def load_adapter_bundle(

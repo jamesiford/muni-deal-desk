@@ -10,40 +10,22 @@ from src.infrastructure.mcp import factory
 from src.infrastructure.mcp.factory import AdapterBundle
 
 
-def test_factory_builds_manifest_and_knowledge_base_adapters(monkeypatch) -> None:
-    client = object()
-    calls: list[dict[str, object]] = []
-
-    def create_client(**kwargs):
-        calls.append(kwargs)
-        return client
-
-    monkeypatch.setattr(factory, "KnowledgeBaseRetrievalClient", create_client)
+def test_factory_builds_manifest_adapter(monkeypatch) -> None:
     monkeypatch.setattr(factory, "ManifestDealRepository", lambda path: ("manifest", path))
-    monkeypatch.setattr(factory, "AzureBlobKnowledgeBaseAdapter", lambda value: ("kb", value))
     credential = object()
     settings = SimpleNamespace(search_endpoint="https://search.example")
 
-    bundle = factory.create_azure_search_adapters(credential, settings)
+    bundle = factory.create_manifest_adapters(credential, settings)
 
     assert bundle.deals[0] == "manifest"
     assert (
         bundle.deals[1] == Path(factory.__file__).resolve().parents[2] / "corpus/out/manifest.json"
     )
-    assert bundle.knowledge == ("kb", client)
-    assert calls == [
-        {
-            "endpoint": "https://search.example",
-            "knowledge_base_name": factory.KNOWLEDGE_BASE_NAME,
-            "credential": credential,
-            "api_version": factory.API_VERSION,
-        }
-    ]
 
 
 def test_runtime_uses_same_credential_for_adapters_and_telemetry(monkeypatch) -> None:
     credential = object()
-    adapters = AdapterBundle(deals=object(), knowledge=object())
+    adapters = AdapterBundle(deals=object())
     telemetry_calls: list[tuple[str, object]] = []
     adapter_calls: list[tuple[str, object, object]] = []
     sentinel = object()

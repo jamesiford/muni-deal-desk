@@ -75,6 +75,12 @@ class ManifestDealRepository:
 
     async def get_deal(self, deal_id: str, caller: CallerContext) -> Deal | None:
         """Return a deal only when at least one source record is visible to the caller."""
+        subject = self._manifest.subject_deal
+        if subject is not None and subject.deal_id == deal_id:
+            permitted = not self._manifest.subject_allowed_group_claims or bool(
+                set(self._manifest.subject_allowed_group_claims) & set(caller.group_claims)
+            )
+            return subject.model_copy(deep=True) if permitted else None
         for entry in self._manifest.documents:
             deal = entry.expected_deal
             if deal is not None and deal.deal_id == deal_id and self._is_visible(entry, caller):

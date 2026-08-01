@@ -28,6 +28,6 @@ async def test_lists_phase_four_tools_over_streamable_http():
 
     assert {tool.name for tool in tools.tools} == {
         "compute_debt_service",
-        "find_comparables",
+        "find_comparable_deals",
         "get_deal",
     }

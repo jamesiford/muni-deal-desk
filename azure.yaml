@@ -1,4 +1,8 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/Azure/azure-dev/main/schemas/v1.0/azure.yaml.json
+requiredVersions:
+  extensions:
+    azure.ai.agents: '>=1.0.0-beta.7'
+
 name: muni-deal-desk
 metadata:
   template: muni-deal-desk@0.1.0
@@ -17,6 +21,36 @@ services:
       path: ./src/hosts/mcp_server/Dockerfile
       context: .
       remoteBuild: true
+  orchestrator:
+    project: .
+    language: python
+    host: azure.ai.agent
+    kind: hosted
+    name: municipal-deal-desk-orchestrator
+    description: Cited municipal new-issue workflow with deterministic controls and approval.
+    codeConfiguration:
+      runtime: python_3_14
+      entryPoint: src/hosts/orchestrator/__main__.py
+    protocols:
+      - protocol: invocations
+        version: 2.0.0
+    environmentVariables:
+      - name: MODEL_ROUTER_DEPLOYMENT
+        value: ${AZURE_AI_ROUTER_DEPLOYMENT}
+      - name: SYNTHESIS_MODEL_DEPLOYMENT
+        value: ${AZURE_AI_REASONING_DEPLOYMENT}
+      - name: RESEARCH_AGENT_VERSION
+        value: ${RESEARCH_AGENT_VERSION}
+      - name: ANALYST_AGENT_VERSION
+        value: ${ANALYST_AGENT_VERSION}
+      - name: COMPLIANCE_AGENT_VERSION
+        value: ${COMPLIANCE_AGENT_VERSION}
+      - name: AZURE_EXPERIMENTAL_ENABLE_GENAI_TRACING
+        value: 'true'
+    container:
+      resources:
+        cpu: '1'
+        memory: 2Gi
 
 # A single `azd up` provisions infrastructure and then completes the data-plane work:
 # corpus generation and upload, index and knowledge base creation, and agent

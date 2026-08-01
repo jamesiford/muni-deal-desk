@@ -68,15 +68,16 @@ Two agent kinds, deliberately, so the session can show both build surfaces:
   they are individually viewable, editable and testable in the Foundry portal.
 - **Hosted workflow agent** (Microsoft Agent Framework): the Deal Desk orchestrator.
   A MAF workflow converted with `.as_agent()` and hosted via
-  `agent_framework_foundry_hosting.InvocationsHostServer`.
+  `agent_framework_foundry_hosting.InvocationsHostServer`. Deploy Python source directly
+  with `host: azure.ai.agent`; do not add a second orchestrator Container App.
 
 Use the **Invocations** protocol for the orchestrator (websocket, SSE keepalive and
 cancellation support suit a multi-minute multi-agent run).
 
-Agent-to-agent communication inside the workflow uses MAF workflow edges with typed
-Pydantic messages. Do not use A2A for internal specialist wiring: MAF's A2A support is
-client-side, intended for consuming externally hosted agents. A2A may be used only for
-an optional, non-critical-path demonstration of protocol interop.
+Agent-to-agent communication uses checkpointed MAF functional workflow steps carrying
+typed Pydantic messages. Do not use A2A for internal specialist wiring: MAF's A2A
+support is client-side, intended for consuming externally hosted agents. A2A may be
+used only for an optional, non-critical-path demonstration of protocol interop.
 
 ## Structured I/O
 
@@ -107,6 +108,9 @@ acceptable. The same contract objects are asserted against by the evaluation sui
 - The knowledge base uses `gpt-5.4-mini` for low-effort query planning and returns
   `extractiveData`. Retrieval instructions are populated; answer instructions are blank
   because specialist agents, not the knowledge base, own synthesis.
+- The Research agent connects directly to the Foundry IQ knowledge base through the
+  `municipal-deal-foundry-iq` connection and `knowledge_base_retrieve`. The separate
+  Deal Desk MCP supplies typed candidates and calculations; it must not proxy IQ.
 - Typed deal lookup and private-side comparables use the packaged corpus manifest through
   `ManifestDealRepository`. It applies caller group claims in application code and
   returns the number of private source records withheld.
@@ -118,9 +122,9 @@ acceptable. The same contract objects are asserted against by the evaluation sui
 - Never commit secrets, tokens, certificates, API keys, or credential-bearing
   connection strings. No generated local environment files.
 - Use managed identity and Microsoft Entra authentication wherever supported.
-- Keep deployment, Foundry project, Search and workload identities distinct. The MCP
-  server and hosted orchestrator share one workload identity because they are the same
-  code trust boundary and require the same downstream access.
+- Keep deployment, Foundry project, Search, MCP workload and hosted-agent identities
+  distinct. Foundry creates a dedicated identity for the hosted orchestrator; the MCP
+  server retains its own user-assigned identity.
 - Grant runtime identities only what they need, at the narrowest practical scope.
 - Do not grant runtime identities `Owner` or `Contributor`.
 - End users receive `Foundry Agent Consumer` at individual-agent scope where possible.

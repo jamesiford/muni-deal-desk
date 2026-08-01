@@ -22,10 +22,13 @@ versioned in the project and therefore individually viewable, editable and testa
 the portal.
 
 The Deal Desk orchestrator is a **Microsoft Agent Framework workflow** converted with
-`.as_agent()` and hosted via `agent_framework_foundry_hosting.InvocationsHostServer`.
+`.as_agent()` and served by `agent_framework_foundry_hosting.InvocationsHostServer`.
+`azd` deploys the Python 3.14 source directly to Foundry Hosted Agents, which builds the
+runtime image, creates an immutable agent version and dedicated agent identity, and
+publishes the Invocations endpoint. The custom MCP server remains in Container Apps.
 
-Internal specialist communication uses workflow edges carrying Pydantic contracts from
-`domain/contracts`. A2A is not used for internal wiring.
+Internal specialist communication uses checkpointed functional workflow steps carrying
+Pydantic contracts from `domain/contracts`. A2A is not used for internal wiring.
 
 The Invocations protocol is chosen over Responses for the orchestrator.
 
@@ -46,15 +49,14 @@ matching distribution. `agent-framework-foundry-hosting` supersedes it and expos
 `InvocationsHostServer` and `ResponsesHostServer`. Sample code found online will not
 run unmodified.
 
-**Fallback:** If the alpha host proves unstable, the orchestrator is deployed as a
-container agent (`kind: container` in `agent.yaml`) running the same workflow behind a
-hand-written ASGI endpoint. The workflow itself, the handlers and the contracts are
-unchanged, because hosting concerns are confined to `hosts/orchestrator`. The demo
-loses portal-native hosted-agent presentation but retains tracing and evaluation.
+**Fallback:** If the alpha host proves unstable, the same workflow can run in Container
+Apps behind its Invocations host. The fallback was exercised during development, then
+removed after native direct-code hosting passed. No fallback ACA or image remains.
 
-**Validation:** `tests/integration` must show the hosted orchestrator responding to an
-invocation and emitting a trace visible in the Foundry portal before this decision is
-treated as proven. Until that test passes, the hosted path is not described as working.
+**Validation:** Foundry Hosted Agent `municipal-deal-desk-orchestrator` version 3 is
+active and portal-visible. A typed `DealDeskRequest` paused for a typed supervising-
+principal decision and resumed to a valid `DealDeskAnswer`. Application Insights shows
+planner, Research, Analyst, synthesis, Compliance, guardrail and approval spans.
 
 ## Consequences
 

@@ -29,10 +29,10 @@ a model switch, a compliance check and a human gate.
 | MCP and tools | Complete | ACA-hosted debt service, comparables and deal lookup tools |
 | Model choice | Deployed | Extraction, reasoning, router and embedding deployments |
 | Governance | Implemented for current paths | Source separation, sensitivity labels and withheld counts |
-| Guardrails | Domain policies implemented | End-to-end workflow gate remains Phase 6 |
-| Agents | Planned | Phase 5 prompt specialists and Phase 6 hosted orchestrator |
+| Guardrails | Complete | Model review plus deterministic blocking and typed human approval |
+| Agents | Complete | Three prompt specialists and native Foundry Hosted orchestrator v3 |
 | Evaluations | Planned | Phase 7 golden-set promotion gate |
-| Tracing and observability | MCP spans validated | Full workflow traces and continuous evaluation remain planned |
+| Tracing and observability | Workflow spans validated | Continuous evaluation remains Phase 7 |
 
 ## Architecture
 
@@ -49,14 +49,14 @@ src/
 The MCP server and the orchestrator dispatch through the same mediator and resolve the
 same handler instances, so a calculation or a policy is implemented exactly once.
 
-The retrieval path has two deliberate sources:
+The Research agent combines two deliberate, separately visible connections:
 
 - `municipal-deal-pdf-blob-source` contains only public PDFs. Foundry IQ generates its
   own Search data source, skillset, index and indexer, and the knowledge base returns
-  cited extractive data.
+  cited extractive data through `knowledge_base_retrieve`.
 - `ManifestDealRepository` reads typed corpus ground truth packaged with the runtime.
-  It filters the three private pricing records using caller group claims and reports the
-  number withheld.
+  The custom MCP exposes typed lookup/calculation tools, filters private pricing records
+  using caller group claims, and reports the number withheld.
 
 Keeping private records out of the public knowledge source makes the demo boundary easy
 to inspect. It is still application-level authorization, not on-behalf-of enforcement.

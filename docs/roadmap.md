@@ -144,7 +144,7 @@ source, skillset, index and indexer.
 **Depends on:** 1
 **Parallel with:** 3
 
-MCP server exposing `compute_debt_service`, `find_comparables` and `get_deal`, as thin
+MCP server exposing `compute_debt_service`, `find_comparable_deals` and `get_deal`, as thin
 adapters over the existing application handlers. Containerised to Container Apps.
 Registered as a Foundry project connection.
 
@@ -163,18 +163,19 @@ deterministic calculator at $30,000,000 principal and $7,672,500 interest.
 
 The idempotent Foundry project connection `muni-deal-desk-mcp` is registered as a
 `RemoteTool`. Application Insights contains spans for all three MCP tools. The workload
-identity holds only `AcrPull`, Search read, model inference and telemetry
-publishing roles; it has no `Owner` or `Contributor` assignment.
+identity holds only `AcrPull` and telemetry publishing; it has no `Owner` or
+`Contributor` assignment.
 
 **Audit (31 July 2026):** `/status` returns `ready`; the endpoint lists all three tools;
-`DEAL-001` still matches the deterministic calculator; and `find_comparables` returns
-five typed deals, 11 Blob citations and three withheld private source records. The
+`DEAL-001` still matches the deterministic calculator; and `find_comparable_deals`
+returns typed deals and withheld private record counts without querying documents. The
 Foundry `RemoteTool` connection targets the live endpoint. Application Insights contains
-recent spans for all three tools. Runtime roles are exactly `AcrPull`, `Search Index Data
-Reader`, `Cognitive Services OpenAI User` and `Monitoring Metrics Publisher`.
+recent spans for all three tools. Runtime roles are exactly `AcrPull` and
+`Monitoring Metrics Publisher`.
 
 ## Phase 5 — Prompt agents
 
+**Status:** complete
 **Depends on:** 3
 
 Three specialists registered with `PromptAgentDefinition` and `create_version`:
@@ -185,31 +186,49 @@ Research, Analyst, Compliance. Each bound to a structured response format from
 Registration must be idempotent: compare desired against current and update rather than
 duplicate versions.
 
-**Exit criteria**
+**Exit criteria — all met**
 
-- All three visible in the portal with instructions, model and tools
-- Each runs standalone in the portal playground
-- Each returns valid instances of its contract
-- Re-running registration produces no duplicate versions
+- [x] All three visible in the portal with instructions, model and tools
+- [x] Each runs standalone in the portal playground
+- [x] Each returns valid instances of its contract
+- [x] Re-running registration produces no duplicate versions
+
+**Validation (31 July 2026):** Research v2, Analyst v1 and Compliance v1 return
+provider-enforced Pydantic contracts. Research has separate portal-visible connections
+to Foundry IQ and the Deal Desk MCP; its trace completed both
+`knowledge_base_retrieve` and `find_comparable_deals`. Analyst and Compliance remained
+unchanged, and a reconciliation run created no duplicate versions.
 
 ## Phase 6 — Orchestrator
 
+**Status:** complete
 **Depends on:** 4, 5
 
 Agent Framework workflow: planner decomposes, Research and Analyst run, Compliance
 gates, human approval before any client-facing draft is returned. Hosted through
 `InvocationsHostServer`.
 
-`agent-framework-foundry-hosting` is alpha. If it proves unstable, fall back to a
-container agent per ADR-0002 — the workflow and handlers are unchanged because hosting
-is confined to `hosts/orchestrator`.
+`agent-framework-foundry-hosting` is alpha and pinned. The Python source is deployed
+directly to Foundry Hosted Agents; Foundry owns containerization, immutable versions,
+the dedicated agent identity and the native Invocations endpoint. ADR-0002 records the
+removed ACA fallback.
 
-**Exit criteria**
+**Exit criteria — all met**
 
-- End-to-end run against the demo question returns a `DealDeskAnswer`
-- Trace shows decomposition, retrieval, tool call and model calls
-- A guardrail-violating draft is blocked, not annotated
-- `requires_human_review` is true on every client-facing draft
+- [x] End-to-end run against the demo question returns a `DealDeskAnswer`
+- [x] Trace shows decomposition, retrieval, tool call and model calls
+- [x] A guardrail-violating draft is blocked, not annotated
+- [x] `requires_human_review` is true on every client-facing draft
+
+**Validation (31 July 2026):** Hosted Agent
+`municipal-deal-desk-orchestrator` v3 is active and portal-visible with Invocations
+2.0.0, Python 3.14 direct-code hosting and a dedicated agent identity. A typed request
+paused at `supervising-principal-approval`, resumed on an explicit typed approval, and
+returned four sections, four comparables and deterministic total debt service of
+$107,673,750.00 with non-blocking compliance and `requires_human_review=true`.
+Application Insights contains successful planner, Research, Analyst, synthesis,
+Compliance, deterministic guardrail and approval spans. The replaced orchestrator ACA,
+image repository, superseded hosted versions and validation sessions were deleted.
 
 ## Phase 7 — Evaluations
 

@@ -65,3 +65,14 @@ async def test_get_deal_returns_visible_public_record() -> None:
 
     assert deal is not None
     assert deal.issuer.name == "Blue Mesa Fictional Independent School District"
+
+
+async def test_subject_deal_requires_deal_team_claim() -> None:
+    repository = ManifestDealRepository(Path("src/corpus/out/manifest.json"))
+
+    public = await repository.get_deal("DEAL-SUBJECT-001", Caller("public-user", ()))
+    private = await repository.get_deal("DEAL-SUBJECT-001", Caller("deal-team-user", (DEAL_TEAM,)))
+
+    assert public is None
+    assert private is not None
+    assert private.par_amount == Decimal("85000000")

@@ -87,6 +87,7 @@ Invoke-Step -Name 'Generate synthetic corpus' -ScriptPath 'scripts/generate_corp
 Invoke-Step -Name 'Ensure Search private Blob access' -ScriptPath 'scripts/ensure_search_blob_private_link.ps1'
 Invoke-Step -Name 'Upload corpus to blob storage' -ScriptPath 'scripts/upload_corpus.ps1'
 Invoke-Step -Name 'Create Blob knowledge source and knowledge base' -ScriptPath 'scripts/setup_search.ps1'
+Invoke-Step -Name 'Register Foundry IQ connection' -ScriptPath 'scripts/register_knowledge_base_connection.ps1'
 Invoke-Step -Name 'Register specialist agents' -ScriptPath 'scripts/register_agents.ps1'
 
 Write-Host ''

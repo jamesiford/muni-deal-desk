@@ -102,6 +102,14 @@ class CorpusManifest(BaseModel):
     generated_at: str
     generator_version: str = "1.0.0"
     documents: list[DocumentEntry]
+    subject_deal: Deal | None = Field(
+        default=None,
+        description="Proposed synthetic financing used as the orchestrator's comparison subject.",
+    )
+    subject_allowed_group_claims: list[str] = Field(
+        default_factory=list,
+        description="Group claims allowed to retrieve the proposed private-side financing.",
+    )
 
     # Recorded in the artifact itself so provenance travels with the data, rather than
     # relying on a reader finding the repository documentation.

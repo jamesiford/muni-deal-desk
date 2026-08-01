@@ -159,6 +159,7 @@ resource project 'Microsoft.CognitiveServices/accounts/projects@2025-04-01-previ
 output accountId string = account.id
 output accountName string = account.name
 output accountEndpoint string = account.properties.endpoint
+output projectId string = project.id
 output projectName string = project.name
 output projectPrincipalId string = project.identity.principalId
 output projectEndpoint string = 'https://${account.name}.services.ai.azure.com/api/projects/${project.name}'

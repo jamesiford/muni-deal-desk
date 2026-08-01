@@ -290,6 +290,33 @@ def _call(year: int) -> CallProvision:
     return CallProvision(first_call_date=date(year, 8, 15), call_price=Decimal("100.00"))
 
 
+def _subject_deal() -> Deal:
+    dated_date = date(2026, 10, 15)
+    par_amount = Decimal("85000000")
+    maturities = _maturities(par_amount, dated_date, 5)
+    return Deal(
+        deal_id="DEAL-SUBJECT-001",
+        issuer=Issuer(
+            issuer_id="FICT-SUBJECT-001",
+            name="Gulf Lantern Fictional Independent School District",
+            state="TX",
+            county="Chambers",
+            enrollment=14_600,
+            taxable_assessed_valuation=Decimal("6375000000"),
+        ),
+        series_name="Proposed Unlimited Tax School Building Bonds, Series 2026",
+        security_type=SecurityType.UNLIMITED_TAX,
+        par_amount=par_amount,
+        dated_date=dated_date,
+        first_maturity=maturities[0].maturity_date,
+        final_maturity=maturities[-1].maturity_date,
+        ratings=RatingSet(moodys="Aa2", sp="AAA", is_enhanced=True),
+        call_provision=_call(2034),
+        maturities=maturities,
+        sensitivity=Sensitivity.PRIVATE,
+    )
+
+
 def _official_statement_documents() -> list[_CorpusDocument]:
     issuers = (
         ("Blue Mesa Fictional Independent School District", "Travis", 8_420, 30, date(2025, 2, 18)),
@@ -740,6 +767,8 @@ def generate_corpus(output_dir: Path | None = None) -> CorpusManifest:
     manifest = CorpusManifest(
         generated_at=datetime.now(UTC).isoformat(),
         documents=entries,
+        subject_deal=_subject_deal(),
+        subject_allowed_group_claims=[DEAL_TEAM_GROUP],
     )
     (destination / "manifest.json").write_text(manifest.model_dump_json(indent=2), encoding="utf-8")
     return manifest

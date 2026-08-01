@@ -90,11 +90,12 @@ Say these plainly if asked. An architect audience will respect the precision, an
 regulated customer will eventually discover any gap between claim and implementation.
 
 **Source separation and application filtering are not on-behalf-of enforcement.** The
-Foundry IQ knowledge source contains public PDFs only. Private pricing memos never enter
-that source. Typed private records are packaged in the corpus manifest, and
-`ManifestDealRepository` compares their allowed groups with the caller claims carried in
-the application message. The agent calls both Search and the repository under its own
-runtime identity, not the user's.
+Foundry IQ contains public PDFs only. Private pricing memos never enter that source.
+Typed private records are packaged in the corpus manifest, and
+`ManifestDealRepository` compares their allowed groups with caller claims carried in the
+application message. Foundry IQ retrieval uses the project identity; hosted orchestration
+uses its dedicated agent identity; the custom MCP uses its own workload identity. None
+is the end user's identity.
 
 The public/private document boundary is physically inspectable, while access to private
 typed records is enforced *by the application*. Neither is the same as the user's own

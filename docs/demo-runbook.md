@@ -96,7 +96,7 @@ Azure portal, resource group `rg-muni-deal-desk-demo`. Focus on these resources:
 | `srch-wdrdcs6ulivnk` | Azure AI Search behind the knowledge base |
 | `stwdrdcs6ulivnk` | Corpus documents |
 | `ca-mcp-wdrdcs6ulivnk` / `cae-` / `cr-` | MCP app, Container Apps environment and registry |
-| `id-wdrdcs6ulivnk` | Shared MCP/orchestrator workload identity |
+| `id-wdrdcs6ulivnk` | MCP workload identity; hosted orchestrator has a dedicated Foundry identity |
 | `appi-` / `log-` | Application Insights and Log Analytics |
 
 Two points worth making here and nowhere else:
@@ -167,6 +167,10 @@ Say: *"This is our own code, exposed over MCP. The agent chose to call it. Criti
 the debt service numbers are computed arithmetically, not generated. A model describes
 the schedule; it does not produce it. That is the difference between a demo and
 something you could put in front of a client."*
+
+Then open the separate `municipal-deal-foundry-iq` connection on Research. Show that
+`knowledge_base_retrieve` belongs to Foundry IQ, while `find_comparable_deals` belongs
+to our custom MCP. The protocol is shared; the capabilities and ownership are distinct.
 
 **Knowledge.** Open `municipal-deal-pdf-blob-source`. Show `kind: azureBlob`, the public
 `pdf/public` folder, and the generated data source, skillset, index and indexer. Then open

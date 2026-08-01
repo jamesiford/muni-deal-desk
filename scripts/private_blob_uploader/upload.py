@@ -5,13 +5,18 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import time
+from collections.abc import Callable
 from pathlib import Path
 
+from azure.core.exceptions import HttpResponseError
 from azure.identity import ManagedIdentityCredential
 from azure.storage.blob import BlobServiceClient, ContentSettings
 
 CORPUS_ROOT = Path("/corpus")
 PREFIX = "pdf/public/"
+MAX_AUTHORIZATION_ATTEMPTS = 12
+AUTHORIZATION_RETRY_SECONDS = 15
 
 
 def _required(name: str) -> str:
@@ -19,6 +24,35 @@ def _required(name: str) -> str:
     if not value:
         raise RuntimeError(f"Missing required environment variable: {name}")
     return value
+
+
+def _error_code(exc: HttpResponseError) -> str | None:
+    error = getattr(exc, "error", None)
+    code = getattr(error, "code", None) or getattr(error, "error_code", None)
+    if isinstance(code, str):
+        return code
+    marker = "ErrorCode:"
+    if marker in str(exc):
+        return str(exc).split(marker, 1)[1].splitlines()[0].strip()
+    return None
+
+
+def _after_role_propagation[TResult](operation: Callable[[], TResult]) -> TResult:
+    """Retry only the transient 403 emitted while a new role assignment propagates."""
+    for attempt in range(1, MAX_AUTHORIZATION_ATTEMPTS + 1):
+        try:
+            return operation()
+        except HttpResponseError as exc:
+            if _error_code(exc) != "AuthorizationPermissionMismatch":
+                raise
+            if attempt == MAX_AUTHORIZATION_ATTEMPTS:
+                raise
+            print(
+                f"storage role not active; retrying ({attempt}/{MAX_AUTHORIZATION_ATTEMPTS})",
+                flush=True,
+            )
+            time.sleep(AUTHORIZATION_RETRY_SECONDS)
+    raise RuntimeError("Authorization retry loop ended unexpectedly.")
 
 
 def main() -> None:
@@ -41,17 +75,20 @@ def main() -> None:
         content = source.read_bytes()
         blob_name = f"{PREFIX}{source.name}"
         expected_names.add(blob_name)
-        container.upload_blob(
-            name=blob_name,
-            data=content,
-            overwrite=True,
-            metadata={
-                "source_sha256": hashlib.sha256(content).hexdigest(),
-                "document_id": document["document_id"],
-                "document_title": document["title"],
-                "sensitivity": "public",
-            },
-            content_settings=ContentSettings(content_type="application/pdf"),
+        metadata = {
+            "source_sha256": hashlib.sha256(content).hexdigest(),
+            "document_id": document["document_id"],
+            "document_title": document["title"],
+            "sensitivity": "public",
+        }
+        _after_role_propagation(
+            lambda blob_name=blob_name, content=content, metadata=metadata: container.upload_blob(
+                name=blob_name,
+                data=content,
+                overwrite=True,
+                metadata=metadata,
+                content_settings=ContentSettings(content_type="application/pdf"),
+            )
         )
         print(f"uploaded {blob_name}", flush=True)
 

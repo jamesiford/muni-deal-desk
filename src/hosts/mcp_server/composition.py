@@ -6,12 +6,7 @@ import os
 
 from azure.core.credentials import TokenCredential
 from azure.identity import DefaultAzureCredential
-from azure.monitor.opentelemetry.exporter import AzureMonitorTraceExporter
 from mcp.server.fastmcp import FastMCP
-from opentelemetry import trace
-from opentelemetry.sdk.resources import Resource
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
 from src.application.handlers.compute_debt_service import ComputeDebtServiceHandler
 from src.application.handlers.find_comparables import FindComparablesHandler
@@ -23,20 +18,12 @@ from src.hosts.mcp_server.server import create_mcp_server
 from src.hosts.mcp_server.settings import McpHostSettings
 from src.infrastructure.calculators import DebtServiceCalculator
 from src.infrastructure.mcp.factory import AdapterBundle, load_adapter_bundle
+from src.infrastructure.observability.tracing import configure_azure_monitor
 
 
 def configure_telemetry(connection_string: str, credential: TokenCredential) -> None:
-    """Export MCP spans to Application Insights with Microsoft Entra authentication."""
-    provider = TracerProvider(resource=Resource.create({"service.name": "muni-deal-desk-mcp"}))
-    provider.add_span_processor(
-        BatchSpanProcessor(
-            AzureMonitorTraceExporter(
-                connection_string=connection_string,
-                credential=credential,
-            )
-        )
-    )
-    trace.set_tracer_provider(provider)
+    """Configure MCP tracing through the shared Azure Monitor adapter."""
+    configure_azure_monitor("muni-deal-desk-mcp", connection_string, credential)
 
 
 def create_mediator(adapters: AdapterBundle) -> Mediator:
@@ -48,7 +35,7 @@ def create_mediator(adapters: AdapterBundle) -> Mediator:
     )
     mediator.register(
         FindComparables,
-        FindComparablesHandler(adapters.deals, adapters.knowledge),
+        FindComparablesHandler(adapters.deals),
     )
     mediator.register(GetDeal, GetDealHandler(adapters.deals))
     return mediator

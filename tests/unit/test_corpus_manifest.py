@@ -18,6 +18,10 @@ def test_generated_manifest_round_trips(tmp_path):
     )
     assert len(manifest.documents) == 14
     assert all(document.expected_deal is not None for document in manifest.documents)
+    assert manifest.subject_deal is not None
+    assert manifest.subject_deal.deal_id == "DEAL-SUBJECT-001"
+    assert manifest.subject_deal.par_amount == 85_000_000
+    assert manifest.subject_allowed_group_claims == [DEAL_TEAM_GROUP]
 
 
 def test_every_defect_kind_is_present(tmp_path):

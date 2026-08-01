@@ -12,7 +12,7 @@ from src.corpus.manifest import CorpusManifest
 from src.domain.entities.deal import DebtServiceSchedule
 from src.infrastructure.calculators import DebtServiceCalculator
 
-EXPECTED_TOOLS = {"compute_debt_service", "find_comparables", "get_deal"}
+EXPECTED_TOOLS = {"compute_debt_service", "find_comparable_deals", "get_deal"}
 
 
 def expected_schedule(manifest_path: Path, deal_id: str) -> DebtServiceSchedule:

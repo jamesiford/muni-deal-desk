@@ -12,7 +12,7 @@ from starlette.responses import PlainTextResponse, Response
 
 from src.application.mediator import Mediator
 from src.application.messages import Caller, ComputeDebtService, FindComparables, GetDeal
-from src.domain.contracts.agent_contracts import ResearchFindings
+from src.domain.contracts.agent_contracts import ComparableCandidates
 from src.domain.entities.deal import Deal, DebtServiceSchedule, SecurityType
 
 tracer = trace.get_tracer(__name__)
@@ -59,8 +59,8 @@ def create_mcp_server(
                 )
             )
 
-    @server.tool(name="find_comparables", structured_output=True)
-    async def find_comparables(
+    @server.tool(name="find_comparable_deals", structured_output=True)
+    async def find_comparable_deals(
         state: str,
         security_type: SecurityType,
         par_amount: Decimal,
@@ -69,9 +69,9 @@ def create_mcp_server(
         months_back: int = 18,
         par_tolerance_pct: Decimal = Decimal("40"),
         limit: int = 5,
-    ) -> ResearchFindings:
-        """Find entitled comparable issues and disclose the withheld-result count."""
-        with tracer.start_as_current_span("mcp.tool.find_comparables"):
+    ) -> ComparableCandidates:
+        """Find entitled typed comparable deals and disclose the withheld count."""
+        with tracer.start_as_current_span("mcp.tool.find_comparable_deals"):
             return await mediator.send(
                 FindComparables(
                     caller=Caller(caller_user_id, tuple(caller_group_claims)),

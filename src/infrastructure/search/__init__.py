@@ -1,7 +1,3 @@
-"""Azure AI Search and Foundry IQ infrastructure adapters."""
+"""Azure AI Search and Foundry IQ setup artifacts."""
 
 from __future__ import annotations
-
-from .knowledge_base import AzureBlobKnowledgeBaseAdapter
-
-__all__ = ["AzureBlobKnowledgeBaseAdapter"]

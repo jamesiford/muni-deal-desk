@@ -13,8 +13,9 @@ Provisioned by `azd up` into `westus3`, subscription `non-production Azure subsc
 | `text-embedding-3-large` | Knowledge base embeddings |
 | Azure AI Search (Standard) | Blob knowledge source, generated ingestion pipeline and knowledge base |
 | Storage account | Public synthetic PDFs; public network access disabled |
-| Azure Container Apps and ACR | Hosts and packages the streamable HTTP MCP server |
-| User-assigned managed identity | Runtime Search/model access, telemetry and ACR pull |
+| Foundry Hosted Agent | Builds and hosts the Agent Framework orchestrator from Python source |
+| Azure Container Apps and ACR | Hosts and packages only the streamable HTTP MCP server |
+| User-assigned managed identity | MCP telemetry publishing and ACR pull |
 | Application Insights and Log Analytics | Traces, token usage and evaluation telemetry |
 
 Region note: the first deployment attempt targeted `eastus2` and failed with
@@ -36,11 +37,13 @@ once and behaves identically on both surfaces.
 
 ```text
 Public PDFs in Blob -> Blob knowledge source -> generated Search pipeline
-                    -> model-backed knowledge base -> cited extractive data
+                    -> Foundry IQ knowledge base -> Research agent connection
+                    -> knowledge_base_retrieve -> cited extractive data
 
-Generated manifest -> ManifestDealRepository -> typed deals and private-record filtering
+Generated manifest -> ManifestDealRepository -> Deal Desk MCP typed tools
+                   -> typed deals and private-record filtering
 
-Both paths -> application handler -> MCP tool / orchestrator
+Research combines both results into ResearchFindings; neither path duplicates the other.
 ```
 
 The public Blob source contains 11 official statements, continuing disclosures and event
@@ -48,9 +51,11 @@ notices. It excludes the three private pricing memos. The knowledge base uses
 `gpt-5.4-mini` for low-effort query planning, returns `extractiveData`, and leaves
 synthesis to the specialist agents.
 
-The manifest repository supplies typed fields for deterministic comparables and applies
-caller group claims to private pricing records. A public caller receives the same public
-knowledge-base citations but fewer typed source records, plus an explicit withheld count.
+The Research agent has two separately visible connections: `municipal-deal-foundry-iq`
+for public narrative retrieval and `muni-deal-desk-mcp` for typed candidate selection.
+The manifest repository applies caller group claims to private pricing records and
+reports an explicit withheld count. The custom MCP server does not query the knowledge
+base.
 
 ## Where numbers come from
 
@@ -88,7 +93,8 @@ identity holds `Owner` or `Contributor`.
 | --- | --- |
 | Foundry project identity | Search Index Data Contributor, Search Service Contributor, Storage Blob Data Reader |
 | Search identity | Storage Blob Data Reader, Cognitive Services OpenAI User, Cognitive Services User |
-| MCP/orchestrator workload identity | Search Index Data Reader, Cognitive Services OpenAI User, Monitoring Metrics Publisher, AcrPull |
+| MCP workload identity | Monitoring Metrics Publisher, AcrPull |
+| Hosted orchestrator identity | Platform-managed per-agent identity; project model and agent access |
 | Developer identity | Azure AI Developer, Cognitive Services User and OpenAI User, Search data and service contributor, Storage Blob Data Contributor |
 
 This posture suits a demonstration presented from a laptop. It is not a production
@@ -102,6 +108,8 @@ landing zone pattern and must not be presented as one. See
 - Azure AI Search data plane is reachable with Entra auth
 - Blob knowledge source processed 11 public PDFs with zero failures
 - Knowledge base returns 11 citations with extractive output
-- MCP endpoint lists and calls all three tools over streamable HTTP
+- Research v2 calls both `find_comparable_deals` and `knowledge_base_retrieve`
+- MCP endpoint lists and calls its three typed tools over streamable HTTP
+- Hosted orchestrator v3 is active with Invocations 2.0.0 and a dedicated agent identity
 - `az bicep build --file infra/main.bicep` compiles with no errors
 - `azd provision` is idempotent across repeated runs

@@ -52,6 +52,9 @@ will be seen during the walkthrough.
 - The knowledge base keeps `gpt-5.4-mini`, low retrieval reasoning, `extractiveData`, and
   explicit retrieval instructions. Do not add answer instructions unless output mode is
   deliberately changed back to answer synthesis.
+- Research consumes the knowledge base through its own ProjectManagedIdentity
+  `RemoteTool` connection. Do not reintroduce an in-process knowledge-base adapter or
+  route document retrieval through the custom Deal Desk MCP.
 - Private pricing memos stay out of Blob IQ and are read from the synthetic manifest by
   `ManifestDealRepository`.
 - Storage public access is disabled. Search reaches Blob through an approved shared
@@ -60,5 +63,5 @@ will be seen during the walkthrough.
 ## Prerelease dependencies
 
 `agent-framework-foundry-hosting` is alpha (`1.0.0a260604`). It is confined to
-`hosts/orchestrator` so the fallback in ADR-0002 does not touch the workflow, the
-handlers or the contracts. Keep it that way: do not import it elsewhere.
+`hosts/orchestrator`; direct Foundry code deployment and any fallback remain hosting
+concerns and must not alter the workflow, handlers or contracts.

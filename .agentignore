@@ -1,0 +1,15 @@
+.azure/
+.git/
+.github/
+.pytest_cache/
+.ruff_cache/
+.venv/
+docs/
+evals/
+infra/
+scripts/
+tests/
+**/__pycache__/
+src/hosts/mcp_server/Dockerfile
+src/hosts/mcp_server/requirements.txt
+src/hosts/orchestrator/Dockerfile

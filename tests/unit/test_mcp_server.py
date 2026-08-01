@@ -6,7 +6,6 @@ from datetime import date
 from decimal import Decimal
 
 from src.application.messages import Caller
-from src.domain.entities.citation import Citation
 from src.domain.entities.deal import Deal, Issuer, MaturityTranche, SecurityType
 from src.hosts.mcp_server.composition import create_mediator
 from src.hosts.mcp_server.server import create_mcp_server
@@ -44,27 +43,16 @@ class RecordingAdapters:
         self.callers.append(caller)
         return [self.deal], 2
 
-    async def search(self, query: str, caller: Caller, *, top: int = 10):
-        self.callers.append(caller)
-        return [
-            Citation(
-                document_id="DOC-001",
-                document_title="Synthetic Official Statement",
-                page=1,
-                excerpt=query,
-            )
-        ], 1
-
 
 async def test_tools_dispatch_through_mediator_with_explicit_caller():
     adapters = RecordingAdapters()
-    mediator = create_mediator(AdapterBundle(deals=adapters, knowledge=adapters))
+    mediator = create_mediator(AdapterBundle(deals=adapters))
     server = create_mcp_server(mediator)
     caller = {"caller_user_id": "analyst", "caller_group_claims": ["public-side"]}
 
     _, deal_result = await server.call_tool("get_deal", {"deal_id": "DEAL-001", **caller})
     _, comparable_result = await server.call_tool(
-        "find_comparables",
+        "find_comparable_deals",
         {
             "state": "TX",
             "security_type": "unlimited_tax",
@@ -74,9 +62,8 @@ async def test_tools_dispatch_through_mediator_with_explicit_caller():
     )
 
     assert deal_result["deal_id"] == "DEAL-001"
-    assert comparable_result["excluded_by_permission"] == 3
+    assert comparable_result["excluded_by_permission"] == 2
     assert adapters.callers == [
-        Caller("analyst", ("public-side",)),
         Caller("analyst", ("public-side",)),
         Caller("analyst", ("public-side",)),
     ]
@@ -84,7 +71,7 @@ async def test_tools_dispatch_through_mediator_with_explicit_caller():
 
 async def test_compute_tool_matches_debt_service_calculator_values():
     adapters = RecordingAdapters()
-    mediator = create_mediator(AdapterBundle(deals=adapters, knowledge=adapters))
+    mediator = create_mediator(AdapterBundle(deals=adapters))
     server = create_mcp_server(mediator)
 
     _, result = await server.call_tool(
