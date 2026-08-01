@@ -127,12 +127,26 @@ module foundry 'modules/foundry.bicep' = {
   }
 }
 
+module containerApps 'modules/container-apps.bicep' = {
+  scope: resourceGroup
+  name: 'container-apps'
+  params: {
+    location: location
+    registryName: '${abbrs.containerRegistryRegistries}${resourceToken}'
+    environmentName: '${abbrs.appManagedEnvironments}${resourceToken}'
+    identityName: '${abbrs.managedIdentityUserAssignedIdentities}${resourceToken}'
+    logAnalyticsId: monitoring.outputs.logAnalyticsId
+    tags: tags
+  }
+}
+
 module rbac 'modules/rbac.bicep' = {
   scope: resourceGroup
   name: 'rbac'
   params: {
     projectPrincipalId: foundry.outputs.projectPrincipalId
     searchPrincipalId: searchStorage.outputs.searchPrincipalId
+    workloadPrincipalId: containerApps.outputs.workloadIdentityPrincipalId
     developerPrincipalId: principalId
     developerPrincipalType: principalType
     accountName: foundry.outputs.accountName
@@ -159,4 +173,10 @@ output AZURE_SEARCH_CONNECTION_NAME string = foundry.outputs.searchConnectionNam
 output AZURE_STORAGE_ACCOUNT_NAME string = searchStorage.outputs.storageAccountName
 output AZURE_STORAGE_BLOB_ENDPOINT string = searchStorage.outputs.storageBlobEndpoint
 output AZURE_STORAGE_CORPUS_CONTAINER string = searchStorage.outputs.corpusContainerName
+output AZURE_CONTAINER_REGISTRY_NAME string = containerApps.outputs.registryName
+output AZURE_CONTAINER_REGISTRY_ENDPOINT string = containerApps.outputs.registryLoginServer
+output AZURE_CONTAINER_ENVIRONMENT_ID string = containerApps.outputs.environmentId
+output AZURE_CONTAINER_ENVIRONMENT_NAME string = containerApps.outputs.environmentName
+output AZURE_WORKLOAD_IDENTITY_ID string = containerApps.outputs.workloadIdentityId
+output AZURE_WORKLOAD_IDENTITY_CLIENT_ID string = containerApps.outputs.workloadIdentityClientId
 output APPLICATIONINSIGHTS_CONNECTION_STRING string = monitoring.outputs.applicationInsightsConnectionString

@@ -7,5 +7,6 @@
   "insightsComponents": "appi-",
   "appManagedEnvironments": "cae-",
   "appContainerApps": "ca-",
-  "containerRegistryRegistries": "cr"
+  "containerRegistryRegistries": "cr",
+  "managedIdentityUserAssignedIdentities": "id-"
 }

@@ -20,31 +20,53 @@ cut from the list in "What to cut, in order" rather than compressing rehearsal.
 
 ## Phase 1 — Infrastructure
 
-**Status:** in progress
+**Status:** complete
 **Blocks:** everything
 
-Bicep deploying into `eastus2`, subscription `non-production Azure subscription`
+Bicep deployed into `westus3`, subscription `non-production Azure subscription`
 (`subscription-id-redacted`).
 
-Resources: Foundry account and project, four model deployments
-(`gpt-5.4-mini`, `gpt-5.5`, `model-router`, `text-embedding-3-large`), Azure AI Search,
-Content Understanding, storage for the corpus, Container Apps environment for the MCP
-server and orchestrator, Log Analytics and Application Insights.
+`eastus2` was the original target and failed with `InsufficientResourcesAvailable` on
+Azure AI Search. `westus3` carries all four model versions at identical SKUs, so the
+move required no template change beyond the location.
+
+Deployed resources: Foundry account and project, four model deployments
+(`gpt-5.4-mini`, `gpt-5.5`, `model-router`, `text-embedding-3-large`), Azure AI Search
+with semantic ranking, storage for the corpus, a Container Apps environment and
+container registry for the MCP server and orchestrator, a user-assigned workload
+identity, and Log Analytics with Application Insights.
+
+Content Understanding is reached through the same `AIServices` account rather than as a
+separate resource.
 
 Four model deployments is deliberate: a single deployment makes the cost attribution
 panel a flat line, which defeats the point of showing it.
 
-**Exit criteria**
+**Exit criteria — all met**
 
-- `az bicep build --file infra/main.bicep` compiles with no errors
-- `azd up` completes
-- Foundry project opens in the portal and lists all four deployments
-- Application Insights receives a test trace
-- No runtime identity holds `Owner` or `Contributor`
+- [x] `az bicep build --file infra/main.bicep` compiles with no errors
+- [x] `azd up` completes
+- [x] Foundry project opens in the portal and lists all four deployments
+- [x] Application Insights receives a test trace
+- [x] No runtime identity holds `Owner` or `Contributor`
+
+**Validation (31 July 2026):** `azd up` completed end to end in 2m35s, deploying the
+Container Apps environment `cae-wdrdcs6ulivnk`, registry `crwdrdcs6ulivnk` and workload
+identity alongside the earlier resources.
+
+`scripts/verify_environment.py` now runs as part of the post-provision hook on every
+`azd up`, because provisioning success is not the same as a working environment. It
+confirms chat completions return from both the extraction and reasoning tiers under
+Entra authentication, the Search data plane is reachable, and a span is accepted by
+Application Insights. All four checks pass.
+
+Role assignments confirmed at resource scope. The workload identity holds only
+`Search Index Data Reader`, `Cognitive Services OpenAI User`, `Storage Blob Data Reader`
+and `AcrPull`. No runtime identity holds `Owner` or `Contributor`.
 
 ## Phase 2 — Synthetic corpus
 
-**Status:** not started
+**Status:** complete
 **Parallel with:** Phase 1
 
 Generate roughly 12 documents as PDFs: official statements, continuing disclosure annual
@@ -69,6 +91,10 @@ Planted defects, because a guardrail that fires only sometimes is not demonstrab
 - Each carries a sensitivity classification
 - A manifest maps document id to expected extracted fields, for eval grading
 - Every planted defect is recorded in the manifest with the behaviour it should trigger
+
+**Validation (31 July 2026):** generated 14 readable PDFs matching the requested document
+mix, with extraction ground truth, sensitivity labels, ACL claims and all planted defects in
+the manifest. PDF render/text checks, Ruff and all 28 unit tests pass.
 
 ## Phase 3 — Extraction and knowledge base
 

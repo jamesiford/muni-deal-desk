@@ -6,6 +6,9 @@ param projectPrincipalId string
 @description('Azure AI Search system-assigned managed identity principal ID.')
 param searchPrincipalId string
 
+@description('User-assigned managed identity used by the MCP server and orchestrator.')
+param workloadPrincipalId string
+
 @description('Object ID of the developer or service principal running the deployment.')
 param developerPrincipalId string
 
@@ -111,6 +114,48 @@ resource searchOpenAIUser 'Microsoft.Authorization/roleAssignments@2022-04-01' =
     roleDefinitionId: subscriptionResourceId(
       'Microsoft.Authorization/roleDefinitions',
       roles.cognitiveServicesOpenAIUser
+    )
+  }
+}
+
+// Container workloads read the index and call models. They never write to either, so
+// the reader roles are the correct pairing even though the developer identity holds
+// contributor rights for setup.
+resource workloadSearchReader 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  scope: searchService
+  name: guid(searchService.id, workloadPrincipalId, roles.searchIndexDataReader)
+  properties: {
+    principalId: workloadPrincipalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: subscriptionResourceId(
+      'Microsoft.Authorization/roleDefinitions',
+      roles.searchIndexDataReader
+    )
+  }
+}
+
+resource workloadOpenAIUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  scope: account
+  name: guid(account.id, workloadPrincipalId, roles.cognitiveServicesOpenAIUser)
+  properties: {
+    principalId: workloadPrincipalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: subscriptionResourceId(
+      'Microsoft.Authorization/roleDefinitions',
+      roles.cognitiveServicesOpenAIUser
+    )
+  }
+}
+
+resource workloadStorageReader 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  scope: storageAccount
+  name: guid(storageAccount.id, workloadPrincipalId, roles.storageBlobDataReader)
+  properties: {
+    principalId: workloadPrincipalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: subscriptionResourceId(
+      'Microsoft.Authorization/roleDefinitions',
+      roles.storageBlobDataReader
     )
   }
 }

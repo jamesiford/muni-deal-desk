@@ -61,6 +61,7 @@ if ($missing) {
 Write-Host ("  Project  : {0}" -f $env:AZURE_AI_PROJECT_ENDPOINT)
 Write-Host ("  Search   : {0}" -f $env:AZURE_SEARCH_ENDPOINT)
 Write-Host ("  Storage  : {0}" -f $env:AZURE_STORAGE_ACCOUNT_NAME)
+Write-Host ("  Registry : {0}" -f $env:AZURE_CONTAINER_REGISTRY_ENDPOINT)
 Write-Host ''
 
 # --- Wait for role assignment propagation ----------------------------------------
@@ -68,6 +69,17 @@ Write-Host ''
 # assignments replicate. A short wait costs less than a failed deployment.
 Write-Host '  Waiting 30s for role assignments to propagate...' -ForegroundColor DarkGray
 Start-Sleep -Seconds 30
+Write-Host ''
+
+# --- Verify the environment actually works ---------------------------------------
+# Provisioning success is not the same as a working environment, and finding out at
+# demonstration time is not acceptable.
+Write-Host '  [run ] Verify environment' -ForegroundColor Yellow
+python (Join-Path $repoRoot 'scripts/verify_environment.py')
+if ($LASTEXITCODE -ne 0) {
+    throw 'Environment verification failed. See failures above.'
+}
+Write-Host '  [ ok ] Verify environment' -ForegroundColor Green
 Write-Host ''
 
 # --- Steps, in dependency order ---------------------------------------------------
