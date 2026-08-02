@@ -40,6 +40,11 @@ resource group were removed.
   policy or create another environment. Do not claim Teams/Copilot Studio integration
   works and do not build an A2A/MCP/HTTP bypass unless the user explicitly reopens the
   architecture. Phase 11 fallback recording is the next actionable phase.
+- Protocol boundary: v4 exposes only Invocations 2.0 with typed start/approval payloads,
+  client-managed sessions and custom SSE. Current Teams/M365 guidance uses Responses +
+  Activity. Do not claim direct publishing compatibility or add those protocols without
+  explicitly designing and validating request, session, approval, citation and identity
+  mappings.
 
 Do not recreate retired resources, superseded agent versions, failed evaluation
 definitions or temporary evaluation agents. Preserve the final evaluation and its two

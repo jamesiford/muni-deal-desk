@@ -712,9 +712,48 @@ Be explicit about what this proves and what it does not:
   by Power Platform policy and would change the architecture without satisfying the
   blocked direct-connector acceptance criterion.
 
+### Protocol caveats if asked
+
+Orchestrator v4 declares only **Invocations 2.0**. That choice is deliberate for this
+application: Invocations accepts the typed `start` and `approve` payloads, preserves a
+client-managed session ID across the human-review pause, and carries custom raw SSE
+events for stages, statuses, evidence, citations and policy findings.
+
+Microsoft's current Hosted Agents guidance recommends **Responses + Activity** for
+agents published to Teams or Microsoft 365. Responses supplies platform-managed
+conversation history and lifecycle events; Activity is the channel bridge. V4 does not
+declare either protocol. The Copilot Studio Foundry connector is preview and its
+documentation does not state that it adapts a custom Invocations contract. DLP blocked
+the connection before we could test that compatibility.
+
+If the policy blocker is removed, do not treat successful connection creation as Phase
+9 completion. Run these acceptance checks:
+
+| Risk | Required proof |
+| --- | --- |
+| Input mapping | Copilot Studio sends a request v4 can validate as `DealDeskRequest`, including the intended persona/claims behavior |
+| Long-running execution | A representative two-to-three-minute run completes without a connector or channel timeout |
+| Streaming | Determine whether custom status/stage events are preserved, collapsed to a generic wait state, or discarded |
+| Human approval | The typed `approval_required` event renders an actionable prompt and the decision resumes the same Foundry session |
+| Session continuity | Teams conversation turns map consistently to the client-managed Invocations session ID |
+| Output fidelity | Structured sections, GFM tables, evidence gaps and permission disclosures survive any parent-agent re-synthesis |
+| Citations | Citation identity and excerpts survive the connected-agent handoff and Teams rendering |
+| Identity | Verify the actual caller identity path; Microsoft Entra login does not by itself prove end-to-end OBO or group-claim enforcement |
+| Guardrails | A prohibited recommendation remains blocked before any draft reaches the channel |
+
+The most likely failure modes are a rejected custom payload, loss of custom SSE events,
+an approval pause with no channel UI, a timeout, or the parent agent rewriting the final
+answer and dropping citations. These are hypotheses to test, not observed failures.
+
+The production-aligned alternative would be to add a **Responses** endpoint and Activity
+channel support alongside Invocations, preserving Invocations for the bespoke front
+door. That is a new protocol adapter with its own conversation, event and approval
+mapping; it is not a configuration toggle and is outside this demo's validated scope.
+
 If asked about the Foundry **Publish to Teams and Microsoft 365** wizard, say that a
 separate direct publication surface was discovered and `Microsoft.BotService` was
-registered, but no Azure Bot resource or Teams application was created and that path
+registered. Current guidance for that path calls for Responses + Activity, which v4
+does not expose. No Azure Bot resource or Teams application was created and that path
 was not validated. Keep it out of the critical walkthrough.
 
 ## Why Foundry for this solution?

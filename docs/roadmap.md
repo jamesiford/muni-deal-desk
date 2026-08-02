@@ -396,12 +396,18 @@ Foundry connected-agent path.
 **Resume criteria:** an administrator must provide a dedicated sandbox or scoped policy
 that permits Azure AI Foundry Agent Service and the Teams/Microsoft 365 channel in
 compatible data groups. After propagation, repeat connection, approval/citation testing,
-personal Teams installation and only then broader sharing.
+personal Teams installation and only then broader sharing. Because v4 exposes only a
+custom Invocations 2.0 contract, acceptance must also prove typed request mapping,
+client-managed session continuity, long-running execution, approval resume, citation
+preservation and guardrail behavior through the Copilot Studio/Teams bridge.
 
 **Separate path discovered:** Foundry exposes a direct **Publish to Teams and Microsoft
 365** wizard. The subscription's `Microsoft.BotService` provider was registered during
-the proof, but no Azure Bot resource or Teams application was created, and this path is
-not counted toward Phase 9 completion.
+the proof. Current Hosted Agents guidance specifies Responses + Activity for direct
+Teams/Microsoft 365 publication; orchestrator v4 declares Invocations only. No Azure Bot
+resource or Teams application was created, and this path is not counted toward Phase 9
+completion. Adding Responses/Activity would be a new protocol adapter, not a deployment
+setting change.
 
 ## Phase 10 — Runbook and rehearsal
 
