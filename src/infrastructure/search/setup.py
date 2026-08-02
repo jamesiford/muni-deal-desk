@@ -160,15 +160,19 @@ def ensure_resource(
 def wait_for_knowledge_source(
     index_client: SearchIndexClient,
     expected_documents: int,
+    get_document_count: Callable[[], int] | None = None,
     timeout_seconds: int = 900,
 ) -> int:
     """Wait for Blob ingestion and return the processed public-document count."""
     deadline = time.monotonic() + timeout_seconds
     while time.monotonic() < deadline:
+        if get_document_count is not None:
+            indexed = get_document_count()
+            if indexed >= expected_documents:
+                return indexed
         status = index_client.get_knowledge_source_status(KNOWLEDGE_SOURCE_NAME)
-        current = status.current_synchronization_state
         completed = status.last_synchronization_state
-        if current is None and completed is not None:
+        if completed is not None:
             failed = getattr(completed, "items_updates_failed", 0) or 0
             processed = getattr(completed, "items_updates_processed", 0) or 0
             if failed:
@@ -195,8 +199,12 @@ def setup_foundry_iq(
     embedding_deployment: str,
     expected_documents: int,
     prepare_generated_indexer: Callable[[str, bool], str] | None = None,
+    get_index_document_count: Callable[[str], int] | None = None,
+    report_progress: Callable[[str], None] | None = None,
 ) -> dict[str, object]:
     """Reconcile the Blob knowledge source and fully configured knowledge base."""
+    progress = report_progress or (lambda _message: None)
+    progress("Reconciling Blob knowledge source")
     source_status = ensure_resource(
         get=lambda: index_client.get_knowledge_source(KNOWLEDGE_SOURCE_NAME),
         upsert=index_client.create_or_update_knowledge_source,
@@ -207,6 +215,8 @@ def setup_foundry_iq(
             embedding_deployment=embedding_deployment,
         ),
     )
+    progress(f"Blob knowledge source: {source_status}")
+    progress("Reconciling knowledge base")
     base_status = ensure_resource(
         get=lambda: index_client.get_knowledge_base(KNOWLEDGE_BASE_NAME),
         upsert=index_client.create_or_update_knowledge_base,
@@ -215,15 +225,31 @@ def setup_foundry_iq(
             chat_deployment=chat_deployment,
         ),
     )
+    progress(f"Knowledge base: {base_status}")
     indexer_status = "not configured"
+    generated_index_name: str | None = None
     if prepare_generated_indexer is not None:
+        progress("Preparing generated indexer")
         source = index_client.get_knowledge_source(KNOWLEDGE_SOURCE_NAME)
         created_resources = source.azure_blob_parameters.created_resources
+        generated_index_name = created_resources["index"]
         indexer_status = prepare_generated_indexer(
             created_resources["indexer"],
             source_status != "unchanged",
         )
-    processed = wait_for_knowledge_source(index_client, expected_documents)
+        progress(f"Generated indexer: {indexer_status}")
+    progress("Waiting for Blob ingestion")
+    count = (
+        (lambda: get_index_document_count(generated_index_name))
+        if get_index_document_count is not None and generated_index_name is not None
+        else None
+    )
+    processed = wait_for_knowledge_source(
+        index_client,
+        expected_documents,
+        get_document_count=count,
+    )
+    progress(f"Blob ingestion: {processed} documents")
     return {
         "knowledge_source": source_status,
         "generated_indexer": indexer_status,

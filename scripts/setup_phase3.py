@@ -12,6 +12,7 @@ from urllib.request import Request, urlopen
 
 from azure.ai.contentunderstanding import ContentUnderstandingClient
 from azure.identity import DefaultAzureCredential
+from azure.search.documents import SearchClient
 from azure.search.documents.indexes import SearchIndexClient
 from azure.search.documents.knowledgebases import KnowledgeBaseRetrievalClient
 from azure.search.documents.knowledgebases.models import (
@@ -170,6 +171,8 @@ def _validate_knowledge_base(
         knowledge_base_name=KNOWLEDGE_BASE_NAME,
         credential=credential,
         api_version=API_VERSION,
+        connection_timeout=30,
+        read_timeout=180,
     )
     response = client.retrieve(
         KnowledgeBaseRetrievalRequest(
@@ -194,7 +197,9 @@ def _validate_knowledge_base(
                     include_reference_source_data=True,
                 )
             ],
-        )
+        ),
+        connection_timeout=30,
+        read_timeout=180,
     )
     references = response.references or []
     if not references:
@@ -265,6 +270,8 @@ def main() -> int:
         endpoint=search_endpoint,
         credential=credential,
         api_version=API_VERSION,
+        connection_timeout=30,
+        read_timeout=180,
     )
     model_endpoint = _model_endpoint(account_name)
     storage_account_id = (
@@ -284,6 +291,15 @@ def main() -> int:
             not document.allowed_group_claims for document in manifest.documents
         ),
         prepare_generated_indexer=_private_indexer_preparer(search_endpoint, credential),
+        get_index_document_count=lambda index_name: SearchClient(
+            endpoint=search_endpoint,
+            index_name=index_name,
+            credential=credential,
+            api_version=API_VERSION,
+            connection_timeout=30,
+            read_timeout=60,
+        ).get_document_count(),
+        report_progress=lambda message: print(f"Search setup: {message}", flush=True),
     )
     for name, status in resources.items():
         print(f"Search {name}: {status}")

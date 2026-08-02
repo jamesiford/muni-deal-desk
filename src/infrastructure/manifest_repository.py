@@ -9,6 +9,7 @@ from pathlib import Path
 
 from src.application.ports import CallerContext
 from src.corpus.manifest import CorpusManifest, DocumentEntry
+from src.domain.entities.citation import EvidenceSource
 from src.domain.entities.deal import Deal, SecurityType
 
 
@@ -45,7 +46,7 @@ class ManifestDealRepository:
         par_tolerance: Decimal,
         months_back: int,
         limit: int = 5,
-    ) -> tuple[list[Deal], int]:
+    ) -> tuple[list[Deal], list[EvidenceSource], int]:
         """Return entitled unique deals and count matching private source documents."""
         cutoff = self._subtract_months(self._today, months_back)
         lower = par_amount - par_tolerance
@@ -71,7 +72,20 @@ class ManifestDealRepository:
             deal = entry.expected_deal
             if deal is not None:
                 deals_by_id.setdefault(deal.deal_id, deal)
-        return list(deals_by_id.values())[:limit], withheld
+        selected_deals = list(deals_by_id.values())[:limit]
+        selected_ids = {deal.deal_id for deal in selected_deals}
+        evidence_sources = [
+            EvidenceSource(
+                document_id=entry.document_id,
+                document_title=entry.title,
+                deal_id=entry.expected_deal.deal_id,
+                source_type=entry.document_type.value,
+                sensitivity=entry.sensitivity,
+            )
+            for entry in visible
+            if entry.expected_deal is not None and entry.expected_deal.deal_id in selected_ids
+        ]
+        return selected_deals, evidence_sources, withheld
 
     async def get_deal(self, deal_id: str, caller: CallerContext) -> Deal | None:
         """Return a deal only when at least one source record is visible to the caller."""

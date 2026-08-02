@@ -52,9 +52,16 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   tags: tags
   properties: {
     allowBlobPublicAccess: false
-    // Entra authentication only. No account keys exist to be leaked or rotated.
+    // Foundry and Search reach Blob through private network paths. Shared keys remain
+    // disabled so every data-plane caller is attributable to an Entra identity.
     allowSharedKeyAccess: false
     minimumTlsVersion: 'TLS1_2'
+    networkAcls: {
+      bypass: 'AzureServices'
+      defaultAction: 'Deny'
+      ipRules: []
+      virtualNetworkRules: []
+    }
     publicNetworkAccess: 'Disabled'
     supportsHttpsTrafficOnly: true
   }

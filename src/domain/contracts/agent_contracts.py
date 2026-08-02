@@ -12,7 +12,7 @@ from decimal import Decimal
 
 from pydantic import BaseModel, Field
 
-from src.domain.entities.citation import Citation, EvidenceGap
+from src.domain.entities.citation import Citation, EvidenceGap, EvidenceSource
 from src.domain.entities.deal import Deal, SecurityType
 
 
@@ -41,6 +41,7 @@ class ComparableCandidates(BaseModel):
     """Typed comparable selection returned by the custom Deal Desk MCP server."""
 
     comparables: list[Deal] = Field(description="Candidate comparable issues, most similar first.")
+    evidence_sources: list[EvidenceSource] = Field(default_factory=list)
     gaps: list[EvidenceGap] = Field(default_factory=list)
     excluded_by_permission: int = Field(
         default=0,
@@ -57,6 +58,7 @@ class ResearchFindings(BaseModel):
 
     comparables: list[Deal] = Field(description="Candidate comparable issues, most similar first.")
     citations: list[Citation]
+    evidence_sources: list[EvidenceSource] = Field(default_factory=list)
     gaps: list[EvidenceGap] = Field(default_factory=list)
     excluded_by_permission: int = Field(
         default=0,
@@ -145,6 +147,7 @@ class DealDeskAnswer(BaseModel):
     comparables_considered: int = 0
     total_debt_service: Decimal | None = None
     compliance: ComplianceReview | None = None
+    evidence_sources: list[EvidenceSource] = Field(default_factory=list)
     gaps: list[EvidenceGap] = Field(default_factory=list)
     partial_due_to_permissions: bool = False
     requires_human_review: bool = True

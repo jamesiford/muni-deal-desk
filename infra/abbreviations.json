@@ -1,6 +1,7 @@
 {
   "resourcesResourceGroups": "rg-",
   "cognitiveServicesAccounts": "aif-",
+  "networkVirtualNetworks": "vnet-",
   "searchSearchServices": "srch-",
   "storageStorageAccounts": "st",
   "operationalInsightsWorkspaces": "log-",

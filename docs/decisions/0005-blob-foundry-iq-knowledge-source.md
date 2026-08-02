@@ -38,8 +38,9 @@ records and reports the number withheld.
 Search reaches Blob through an approved shared private link. The generated indexer is
 preserved and patched only to set `parameters.configuration.executionEnvironment` to
 `private`, as required for reliable shared-private-link execution. Corpus upload uses a
-short-lived ACI identity, VNet and private endpoint; those resources and the uploader
-image are deleted after use.
+short-lived ACI attached to a persistent delegated uploader subnet, private endpoint,
+private DNS zone and dedicated managed identity. Only the ACI and its temporary image
+tag are deleted after use.
 
 ## Preview limitation
 
@@ -71,6 +72,6 @@ The accepted deployment was validated by:
 - generated data source, skillset, index and indexer present under the source name
 - knowledge base returning 11 cited references
 - a second setup run reporting source, generated indexer and knowledge base unchanged
-- Research v2 completing direct `knowledge_base_retrieve` for cited public passages and
+- Research v1 completing direct `knowledge_base_retrieve` for cited public passages and
   custom MCP `find_comparable_deals` for typed candidates and withheld private records
 - removal of the superseded manual index and index-backed knowledge source

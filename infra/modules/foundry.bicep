@@ -15,6 +15,9 @@ param projectDescription string
 @description('Azure region.')
 param location string
 
+@description('Delegated subnet used for Foundry evaluation and hosted-agent network injection.')
+param agentSubnetId string
+
 @description('Model deployments to create.')
 param modelDeployments array
 
@@ -64,6 +67,19 @@ resource account 'Microsoft.CognitiveServices/accounts@2025-04-01-preview' = {
     // Entra authentication only. Combined with public network access this keeps
     // access identity-controlled rather than key-controlled. See ADR-0003.
     disableLocalAuth: true
+    networkAcls: {
+      bypass: 'AzureServices'
+      defaultAction: 'Allow'
+      ipRules: []
+      virtualNetworkRules: []
+    }
+    networkInjections: [
+      {
+        scenario: 'agent'
+        subnetArmId: agentSubnetId
+        useMicrosoftManagedNetwork: false
+      }
+    ]
     publicNetworkAccess: 'Enabled'
   }
 }
@@ -158,6 +174,7 @@ resource project 'Microsoft.CognitiveServices/accounts/projects@2025-04-01-previ
 
 output accountId string = account.id
 output accountName string = account.name
+output accountPrincipalId string = account.identity.principalId
 output accountEndpoint string = account.properties.endpoint
 output projectId string = project.id
 output projectName string = project.name

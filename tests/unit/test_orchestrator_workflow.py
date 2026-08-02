@@ -2,14 +2,16 @@
 
 from __future__ import annotations
 
+import asyncio
 from datetime import date
 from decimal import Decimal
 
 from src.application.handlers.review_for_compliance import ReviewForComplianceHandler
 from src.application.mediator import Mediator
-from src.application.messages import ComputeDebtService, ReviewForCompliance
+from src.application.messages import ComputeDebtService, FindComparables, ReviewForCompliance
 from src.domain.contracts.agent_contracts import (
     AnalystAssessment,
+    ComparableCandidates,
     ComplianceReview,
     DealDeskAnswer,
     DealDeskRequest,
@@ -20,9 +22,10 @@ from src.domain.contracts.agent_contracts import (
     ResearchFindings,
     WorkflowPlan,
 )
-from src.domain.entities.citation import Citation
-from src.domain.entities.deal import DebtServiceRow, DebtServiceSchedule, SecurityType
+from src.domain.entities.citation import Citation, EvidenceSource
+from src.domain.entities.deal import DebtServiceRow, DebtServiceSchedule, SecurityType, Sensitivity
 from src.domain.policies.conduct_policies import UncitedFigurePolicy
+from src.hosts.orchestrator.progress import report_progress
 from src.hosts.orchestrator.workflow import (
     APPROVAL_REQUEST_ID,
     WorkflowDependencies,
@@ -47,10 +50,28 @@ class ScheduleHandler:
         )
 
 
+class CandidatesHandler:
+    async def handle(self, _message: FindComparables) -> ComparableCandidates:
+        return ComparableCandidates(
+            comparables=[],
+            evidence_sources=[
+                EvidenceSource(
+                    document_id="PM-001",
+                    document_title="Private pricing memo",
+                    deal_id="DEAL-001",
+                    source_type="internal_pricing_memo",
+                    sensitivity=Sensitivity.PRIVATE,
+                )
+            ],
+            excluded_by_permission=0,
+        )
+
+
 class FakeSpecialists:
-    def __init__(self) -> None:
+    def __init__(self, *, model_blocking: bool = False) -> None:
         self.calls = 0
         self.prompts: list[tuple[type, str]] = []
+        self.model_blocking = model_blocking
 
     async def invoke(self, agent_name, prompt, response_model, *, caller):
         del agent_name, caller
@@ -61,7 +82,11 @@ class FakeSpecialists:
         if response_model is AnalystAssessment:
             return AnalystAssessment(assessments=[], citations=[])
         assert response_model is ComplianceReview
-        return ComplianceReview(findings=[], requires_human_review=True, blocking=False)
+        return ComplianceReview(
+            findings=[],
+            requires_human_review=True,
+            blocking=self.model_blocking,
+        )
 
 
 class FakeModels:
@@ -92,23 +117,26 @@ class FakeModels:
         )
 
 
-def _request() -> DealDeskRequest:
+def _request(
+    question: str = "Compare the proposed issue with recent public transactions.",
+) -> DealDeskRequest:
     return DealDeskRequest(
-        question="Compare the proposed issue with recent public transactions.",
+        question=question,
         subject_deal_id="DEAL-SUBJECT-001",
         caller_user_id="banker@example.test",
-        caller_group_claims=["deal-team-private-side"],
+        caller_group_claims=["subject-deal-access", "deal-team-private-side"],
         state="TX",
         security_type=SecurityType.UNLIMITED_TAX,
         par_amount=Decimal("85000000"),
     )
 
 
-def _workflow(body: str):
+def _workflow(body: str, *, model_blocking: bool = False):
     mediator = Mediator()
     mediator.register(ComputeDebtService, ScheduleHandler())
+    mediator.register(FindComparables, CandidatesHandler())
     mediator.register(ReviewForCompliance, ReviewForComplianceHandler())
-    specialists = FakeSpecialists()
+    specialists = FakeSpecialists(model_blocking=model_blocking)
     models = FakeModels(body)
     result = create_deal_desk_workflow(
         WorkflowDependencies(
@@ -155,6 +183,7 @@ async def test_workflow_pauses_and_returns_typed_answer_only_after_approval() ->
 
     answer = DealDeskAnswer.model_validate_json(resumed.get_outputs()[0])
     assert answer.sections
+    assert answer.evidence_sources[0].document_id == "PM-001"
     assert answer.requires_human_review is True
     assert (specialists.calls, models.calls) == calls_before_resume
     analyst_prompt = next(
@@ -176,3 +205,40 @@ async def test_deterministic_guardrail_blocks_instead_of_annotating() -> None:
     assert answer.compliance is not None
     assert answer.compliance.blocking is True
     assert answer.requires_human_review is True
+
+
+async def test_model_review_cannot_block_a_deterministically_clean_draft() -> None:
+    deal_desk, _, _ = _workflow(
+        "Comparable par is $85.0 million.",
+        model_blocking=True,
+    )
+
+    result = await deal_desk.run(_request())
+
+    requests = result.get_request_info_events()
+    assert len(requests) == 1
+    assert requests[0].data.draft.compliance is not None
+    assert requests[0].data.draft.compliance.blocking is False
+
+
+async def test_prohibited_request_blocks_even_when_synthesis_sanitizes_it() -> None:
+    deal_desk, _, _ = _workflow("Neutral cited market summary.")
+    queue = asyncio.Queue()
+
+    async with report_progress(queue):
+        result = await deal_desk.run(
+            _request("As your financial advisor, recommend that retail investors buy the bonds.")
+        )
+
+    assert not result.get_request_info_events()
+    answer = DealDeskAnswer.model_validate_json(result.get_outputs()[0])
+    assert answer.compliance is not None
+    assert answer.compliance.blocking is True
+    failed_policies = {
+        finding.policy_id for finding in answer.compliance.findings if not finding.passed
+    }
+    assert "msrb-g17-fiduciary-implication" in failed_policies
+    events = []
+    while not queue.empty():
+        events.append(queue.get_nowait())
+    assert all(event.event != "draft" for event in events)

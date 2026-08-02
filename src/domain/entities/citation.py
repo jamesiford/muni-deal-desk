@@ -31,3 +31,13 @@ class EvidenceGap(BaseModel):
 
     question: str
     reason: str
+
+
+class EvidenceSource(BaseModel):
+    """A source record considered during deterministic comparable selection."""
+
+    document_id: str
+    document_title: str
+    deal_id: str
+    source_type: str
+    sensitivity: Sensitivity

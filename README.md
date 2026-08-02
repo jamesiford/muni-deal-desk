@@ -4,19 +4,17 @@ A Microsoft Foundry demonstration solution: a new-issue **Deal Desk** agent for 
 public finance broker-dealer desk.
 
 The solution exists to make Foundry platform capabilities visible and explainable in a
-customer technical session. Phases 1-4 are complete: infrastructure, synthetic corpus,
-Foundry IQ and MCP. Agents, orchestration and evaluations remain roadmap work and must
-not be presented as working until their validation passes.
+customer technical session. Infrastructure, synthetic corpus, Foundry IQ, MCP, prompt
+agents, hosted orchestration, evaluations and the banker-facing front door are complete.
 
 ## The scenario
 
 A banker preparing a competitive response asks one deliberately messy question:
 
-> Baytown ISD is issuing about $85 million of unlimited tax school building bonds this
-> fall. Pull the three most comparable Texas ISD issues from the last 18 months, compare
-> their debt service structure and call features to what we're proposing, flag anything
-> in their continuing disclosure that would affect pricing, and draft the market summary
-> section for our RFP response.
+> Gulf Lantern Fictional ISD is issuing about $85 million of unlimited tax school
+> building bonds this fall. Pull the most comparable Texas ISD issues from the last
+> 18 months, compare debt service and call features, flag evidence gaps, and draft the
+> market summary section for our RFP response.
 
 Answering it requires decomposition, retrieval across several source types, a tool call,
 a model switch, a compliance check and a human gate.
@@ -26,13 +24,30 @@ a model switch, a compliance check and a human gate.
 | Capability | Status | Where it appears |
 | --- | --- | --- |
 | Foundry IQ | Complete | Blob-backed public PDF source with model-planned, extractive retrieval |
+| Content Understanding | Complete | Portal-visible typed municipal document analyzer, validated 14/14 |
 | MCP and tools | Complete | ACA-hosted debt service, comparables and deal lookup tools |
 | Model choice | Deployed | Extraction, reasoning, router and embedding deployments |
 | Governance | Implemented for current paths | Source separation, sensitivity labels and withheld counts |
 | Guardrails | Complete | Model review plus deterministic blocking and typed human approval |
 | Agents | Complete | Three prompt specialists and native Foundry Hosted orchestrator v3 |
-| Evaluations | Planned | Phase 7 golden-set promotion gate |
-| Tracing and observability | Workflow spans validated | Continuous evaluation remains Phase 7 |
+| Evaluations | Complete | 25-case local/portal gate and two-model comparison |
+| Tracing and observability | Complete for demo | Workflow spans, stage streaming and portal evaluation runs |
+| BYO memory / Cosmos DB | Not implemented | Platform-managed state only; documented production option |
+| Fine-tuning | Not used | Evaluation-first baseline retained for a future candidate |
+
+## Demo narrative
+
+The presenter runbook explains the municipal Deal Desk, public finance broker-dealer audiences,
+personas, prompt terminology, call provisions, private precedent value, every deployed
+Azure service, all four document types, and the complete Foundry Home/Discover/Build/
+Operate walkthrough. See [docs/demo-runbook.md](docs/demo-runbook.md).
+
+Supporting detail:
+
+- [Architecture and trust boundaries](docs/architecture.md)
+- [Guardrail scope and regulatory framing](docs/guardrails.md)
+- [Hybrid evaluation networking](docs/hybrid-evaluation-networking-plan.md)
+- [Build and validation history](docs/roadmap.md)
 
 ## Architecture
 
@@ -94,6 +109,36 @@ python -m pytest tests/unit      # passes without Azure credentials
 python -m ruff check .
 ```
 
+Provision and deploy the complete hybrid demo environment with one command:
+
+```powershell
+azd up --environment demo-vnet
+```
+
+The Foundry portal remains public and Entra-protected for the walkthrough. Foundry
+outbound evaluation traffic is VNet-injected into private Blob storage; Search uses a
+shared private link, and corpus upload runs in a persistent private uploader subnet.
+
+The frontend is intentionally **not deployed to Azure**. Azure hosts the MCP Container
+App and Foundry Hosted orchestrator; the presenter runs the React/FastAPI front door
+locally against that hosted Invocations endpoint.
+
+Run the complete demo from a fresh shell after `azd up`:
+
+```powershell
+azd env select demo-vnet
+npm install --prefix frontend
+npm run build --prefix frontend
+azd env get-values --environment demo-vnet | ForEach-Object {
+  if ($_ -match '^([^=]+)="(.*)"$') { Set-Item "Env:$($matches[1])" $matches[2] }
+}
+python -m src.hosts.front_door
+```
+
+Open `http://127.0.0.1:8080`. The local FastAPI process serves `frontend/dist` and
+bridges browser SSE requests to the deployed hosted-agent endpoint. Stop it with
+`Ctrl+C` after the walkthrough.
+
 ## Validation
 
 | Check | Command |
@@ -102,5 +147,7 @@ python -m ruff check .
 | Format | `python -m ruff format --check .` |
 | Unit tests | `python -m pytest tests/unit` |
 | Infrastructure | `az bicep build --file infra/main.bicep` |
+| Local evaluation gate | `python -m evals.runner --local-only --environment demo-vnet` |
+| Cloud two-model gate | `python -m evals.runner --environment demo-vnet` |
 | Phase 3 cloud artifacts | `python -m scripts.setup_phase3 --validate-content-understanding` |
 | Deployed MCP | `python -m scripts.smoke_mcp $(azd env get-value MCP_ENDPOINT)` |

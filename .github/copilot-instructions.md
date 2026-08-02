@@ -13,6 +13,26 @@ VS Code:
 Agents, MCP, Foundry IQ, Evaluations, Observability, Tracing, Model choice, Tools,
 Governance, Guardrails.
 
+## Current validated state
+
+Phases 1-8, 7A and 10 are complete in azd environment `demo-vnet`, resource group
+`rg-muni-deal-desk-demo-vnet`, region `westus3`. The retired `demo` environment and
+resource group were removed.
+
+- Prompt specialists: Research v1, Analyst v1, Compliance v1.
+- Hosted orchestrator: `municipal-deal-desk-orchestrator` v3, Invocations 2.0.0.
+- Foundry IQ: 11 public PDFs; three private `PM-*` records remain manifest-only.
+- Final evaluation: both mini and reasoning configurations passed 25/25 portal rows,
+  with zero failed and zero errored rows.
+- Front door: React/Vite output served by local FastAPI. It is not an Azure service.
+  `azure.yaml` deploys only MCP and the hosted orchestrator.
+- Next roadmap phase: Phase 9, Copilot Studio/Teams. Phase 11 fallback recording is
+  pending and may proceed in parallel.
+
+Do not recreate retired resources, superseded agent versions, failed evaluation
+definitions or temporary evaluation agents. Preserve the final evaluation and its two
+file-backed datasets unless the user explicitly requests a new promoted run.
+
 ## Presentation constraint (drives design)
 
 This is a demo asset. Two rules follow from that and outrank convenience:
@@ -169,3 +189,9 @@ must not overstate the platform.
 - Scan for accidentally committed credentials before any push.
 - The evaluation gate in `.github/workflows/eval-gate.yml` must pass before an agent
   version is promoted.
+- The canonical full local gate is:
+  `pytest tests/unit tests/integration`, `ruff check .`, `ruff format --check .`,
+  `python -m evals.runner --local-only --environment demo-vnet`,
+  `npm run build --prefix frontend`, and `az bicep build --file infra/main.bicep`.
+- Run the presentation front door locally after building `frontend/dist`; do not add an
+  Azure frontend host unless a future roadmap decision explicitly changes the topology.

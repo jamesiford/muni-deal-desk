@@ -24,7 +24,7 @@ class FindComparablesHandler:
         """Find entitled comparables and record typed-data gaps."""
         tolerance = message.par_amount * (message.par_tolerance_pct / Decimal("100"))
 
-        deals, deals_withheld = await self._deals.find_comparables(
+        deals, evidence_sources, deals_withheld = await self._deals.find_comparables(
             caller=message.caller,
             state=message.state,
             security_type=message.security_type,
@@ -57,6 +57,7 @@ class FindComparablesHandler:
 
         return ComparableCandidates(
             comparables=deals,
+            evidence_sources=evidence_sources,
             gaps=gaps,
             excluded_by_permission=deals_withheld,
         )

@@ -6,6 +6,7 @@
 $ErrorActionPreference = 'Stop'
 
 $required = @(
+    'AZURE_SUBSCRIPTION_ID',
     'AZURE_RESOURCE_GROUP',
     'AZURE_SEARCH_SERVICE_NAME',
     'AZURE_STORAGE_ACCOUNT_NAME'
@@ -21,22 +22,30 @@ $storageId = az storage account show `
     --resource-group $env:AZURE_RESOURCE_GROUP `
     --query id `
     --output tsv
+$searchId = (
+    "/subscriptions/$($env:AZURE_SUBSCRIPTION_ID)/resourceGroups/" +
+    "$($env:AZURE_RESOURCE_GROUP)/providers/Microsoft.Search/searchServices/" +
+    $env:AZURE_SEARCH_SERVICE_NAME
+)
+$linkUri = (
+    "https://management.azure.com$searchId/sharedPrivateLinkResources/" +
+    "${linkName}?api-version=2024-06-01-preview"
+)
 
-az search shared-private-link-resource show `
-    --name $linkName `
-    --service-name $env:AZURE_SEARCH_SERVICE_NAME `
-    --resource-group $env:AZURE_RESOURCE_GROUP `
-    --output none 2>$null
+$link = az rest --method get --url $linkUri --output json 2>$null | ConvertFrom-Json
 if ($LASTEXITCODE -ne 0) {
-    az search shared-private-link-resource create `
-        --name $linkName `
-        --service-name $env:AZURE_SEARCH_SERVICE_NAME `
-        --resource-group $env:AZURE_RESOURCE_GROUP `
-        --group-id blob `
-        --resource-id $storageId `
-        --request-message 'Approve private Blob access for Municipal Deal Desk knowledge source' `
-        --only-show-errors `
-        --output none
+    $linkBody = @{
+        properties = @{
+            groupId = 'blob'
+            privateLinkResourceId = $storageId
+            requestMessage = 'Approve private Blob access for Municipal Deal Desk knowledge source'
+        }
+    } | ConvertTo-Json -Depth 5 -Compress
+    $link = az rest `
+        --method put `
+        --url $linkUri `
+        --body $linkBody `
+        --output json | ConvertFrom-Json
     if ($LASTEXITCODE -ne 0) {
         throw 'Could not create the Search shared private link to Blob Storage.'
     }
@@ -63,11 +72,7 @@ foreach ($connection in $pending) {
     }
 }
 
-$link = az search shared-private-link-resource show `
-    --name $linkName `
-    --service-name $env:AZURE_SEARCH_SERVICE_NAME `
-    --resource-group $env:AZURE_RESOURCE_GROUP `
-    --output json | ConvertFrom-Json
+$link = az rest --method get --url $linkUri --output json | ConvertFrom-Json
 if ($link.properties.status -ne 'Approved' -or $link.properties.provisioningState -ne 'Succeeded') {
     throw (
         "Search Blob private link is not ready: " +

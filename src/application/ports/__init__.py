@@ -11,6 +11,7 @@ from decimal import Decimal
 from typing import Protocol, TypeVar
 
 from src.domain.contracts.agent_contracts import ComplianceReview
+from src.domain.entities.citation import EvidenceSource
 from src.domain.entities.deal import Deal, DebtServiceSchedule, SecurityType
 
 TResponse = TypeVar("TResponse")
@@ -51,10 +52,11 @@ class DealRepositoryPort(Protocol):
         par_tolerance: Decimal,
         months_back: int,
         limit: int = 5,
-    ) -> tuple[list[Deal], int]:
+    ) -> tuple[list[Deal], list[EvidenceSource], int]:
         """Find priced issues comparable to a proposed deal.
 
-        Returns matches plus the count withheld by the entitlement filter.
+        Returns unique deals, visible source records, and the count withheld by the
+        entitlement filter.
         """
         ...
 

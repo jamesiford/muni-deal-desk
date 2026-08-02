@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 
 from azure.ai.projects import AIProjectClient
 from azure.identity import DefaultAzureCredential
@@ -57,6 +58,7 @@ def _smoke_agent(openai: object, spec: object, version: object) -> BaseModel:
 
 def main() -> int:
     """Reconcile specialists and prove each one returns its contract standalone."""
+    skip_smoke = "--skip-smoke" in sys.argv[1:]
     endpoint = _required("AZURE_AI_PROJECT_ENDPOINT")
     client = AIProjectClient(endpoint, DefaultAzureCredential())
     try:
@@ -77,11 +79,12 @@ def main() -> int:
             status, version = ensure_specialist(client.agents, spec)
             versions[spec.name] = str(version.version)
             print(f"Agent {spec.name} version {version.version}: {status}")
-            result = _smoke_agent(openai, spec, version)
-            print(
-                f"Agent {spec.name} contract: "
-                f"{json.dumps(result.model_dump(mode='json'), separators=(',', ':'))[:240]}"
-            )
+            if not skip_smoke:
+                result = _smoke_agent(openai, spec, version)
+                print(
+                    f"Agent {spec.name} contract: "
+                    f"{json.dumps(result.model_dump(mode='json'), separators=(',', ':'))[:240]}"
+                )
         print("AZD_AGENT_VERSIONS=" + json.dumps(versions, separators=(",", ":")))
     finally:
         client.close()

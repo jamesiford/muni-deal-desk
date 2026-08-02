@@ -68,6 +68,6 @@ hooks:
     continueOnError: false
   postdeploy:
     shell: pwsh
-    run: ./scripts/register_mcp_connection.ps1 -Environment $env:AZURE_ENV_NAME
+    run: ./scripts/postdeploy.ps1
     interactive: true
     continueOnError: false

@@ -108,11 +108,23 @@ module searchStorage 'modules/search-storage.bicep' = {
   }
 }
 
+module evaluationNetwork 'modules/evaluation-network.bicep' = {
+  scope: resourceGroup
+  name: 'evaluation-network'
+  params: {
+    location: location
+    vnetName: '${abbrs.networkVirtualNetworks}${resourceToken}'
+    storageAccountName: searchStorage.outputs.storageAccountName
+    tags: tags
+  }
+}
+
 module foundry 'modules/foundry.bicep' = {
   scope: resourceGroup
   name: 'foundry'
   params: {
     location: location
+    agentSubnetId: evaluationNetwork.outputs.agentSubnetId
     accountName: '${abbrs.cognitiveServicesAccounts}${resourceToken}'
     projectName: 'muni-deal-desk'
     projectDisplayName: 'Municipal Deal Desk'
@@ -138,6 +150,7 @@ module containerApps 'modules/container-apps.bicep' = {
     registryName: '${abbrs.containerRegistryRegistries}${resourceToken}'
     environmentName: '${abbrs.appManagedEnvironments}${resourceToken}'
     identityName: '${abbrs.managedIdentityUserAssignedIdentities}${resourceToken}'
+      uploaderPrincipalId: evaluationNetwork.outputs.uploaderIdentityPrincipalId
     mcpAppName: 'ca-mcp-${resourceToken}'
     mcpResourceExists: mcpResourceExists
     logAnalyticsId: monitoring.outputs.logAnalyticsId
@@ -157,16 +170,29 @@ module containerApps 'modules/container-apps.bicep' = {
   }
 }
 
+module toolConnections 'modules/tool-connections.bicep' = {
+  scope: resourceGroup
+  name: 'tool-connections'
+  params: {
+    accountName: foundry.outputs.accountName
+    projectName: foundry.outputs.projectName
+    mcpEndpoint: '${containerApps.outputs.mcpUri}/mcp'
+    knowledgeBaseEndpoint: '${searchStorage.outputs.searchServiceEndpoint}/knowledgebases/municipal-deal-knowledge-base/mcp?api-version=2026-05-01-preview'
+  }
+}
+
 module rbac 'modules/rbac.bicep' = {
   scope: resourceGroup
   name: 'rbac'
   params: {
+    accountPrincipalId: foundry.outputs.accountPrincipalId
     projectPrincipalId: foundry.outputs.projectPrincipalId
     searchPrincipalId: searchStorage.outputs.searchPrincipalId
     workloadPrincipalId: containerApps.outputs.workloadIdentityPrincipalId
     developerPrincipalId: principalId
     developerPrincipalType: principalType
     accountName: foundry.outputs.accountName
+    projectName: foundry.outputs.projectName
     searchServiceName: searchStorage.outputs.searchServiceName
     storageAccountName: searchStorage.outputs.storageAccountName
     applicationInsightsName: monitoring.outputs.applicationInsightsName
@@ -193,6 +219,10 @@ output AZURE_SEARCH_CONNECTION_NAME string = foundry.outputs.searchConnectionNam
 output AZURE_STORAGE_ACCOUNT_NAME string = searchStorage.outputs.storageAccountName
 output AZURE_STORAGE_BLOB_ENDPOINT string = searchStorage.outputs.storageBlobEndpoint
 output AZURE_STORAGE_CORPUS_CONTAINER string = searchStorage.outputs.corpusContainerName
+output AZURE_CORPUS_UPLOADER_IDENTITY_ID string = evaluationNetwork.outputs.uploaderIdentityId
+output AZURE_CORPUS_UPLOADER_CLIENT_ID string = evaluationNetwork.outputs.uploaderIdentityClientId
+output AZURE_CORPUS_UPLOADER_SUBNET string = evaluationNetwork.outputs.uploaderSubnetName
+output AZURE_EVALUATION_VNET_NAME string = evaluationNetwork.outputs.vnetName
 output AZURE_CONTAINER_REGISTRY_NAME string = containerApps.outputs.registryName
 output AZURE_CONTAINER_REGISTRY_ENDPOINT string = containerApps.outputs.registryLoginServer
 output AZURE_CONTAINER_ENVIRONMENT_ID string = containerApps.outputs.environmentId

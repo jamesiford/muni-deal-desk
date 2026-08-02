@@ -1,0 +1,79 @@
+name: Evaluation gate
+
+on:
+  pull_request:
+    paths:
+      - "evals/**"
+      - "tests/unit/test_eval_*.py"
+      - ".github/workflows/eval-gate.yml"
+  workflow_dispatch:
+    inputs:
+      run_cloud:
+        description: Run the deployed mini-versus-reasoning comparison
+        required: true
+        default: false
+        type: boolean
+      environment:
+        description: GitHub and azd environment name
+        required: true
+        default: demo
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  local-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+          cache: pip
+      - run: python -m pip install --upgrade pip
+      - run: python -m pip install -r requirements-dev.txt
+      - run: python -m ruff check evals tests/unit/test_eval_*.py
+      - run: python -m ruff format --check evals tests/unit/test_eval_*.py
+      - run: python -m pytest tests/unit/test_eval_*.py -q
+      - run: python -m evals.runner --local-only --environment ci
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: local-evaluation-results
+          path: evals/results/
+          if-no-files-found: error
+
+  cloud-gate:
+    if: github.event_name == 'workflow_dispatch' && inputs.run_cloud
+    needs: local-gate
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+          cache: pip
+      - run: python -m pip install --upgrade pip
+      - run: python -m pip install -r requirements-dev.txt
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - name: Run deployed comparison and Foundry evaluation
+        run: python -m evals.runner --environment "${{ inputs.environment }}"
+        env:
+          AZURE_AI_PROJECT_ENDPOINT: ${{ vars.AZURE_AI_PROJECT_ENDPOINT }}
+          AZURE_AI_EXTRACTION_DEPLOYMENT: ${{ vars.AZURE_AI_EXTRACTION_DEPLOYMENT }}
+          AZURE_AI_REASONING_DEPLOYMENT: ${{ vars.AZURE_AI_REASONING_DEPLOYMENT }}
+          AZURE_SEARCH_ENDPOINT: ${{ vars.AZURE_SEARCH_ENDPOINT }}
+          MCP_ENDPOINT: ${{ vars.MCP_ENDPOINT }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cloud-evaluation-results
+          path: evals/results/
+          if-no-files-found: warn

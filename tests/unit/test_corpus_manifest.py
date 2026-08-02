@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from src.corpus.generate import DEAL_TEAM_GROUP, generate_corpus
+from src.corpus.generate import DEAL_TEAM_GROUP, SUBJECT_ACCESS_GROUP, generate_corpus
 from src.corpus.manifest import CorpusManifest, DefectKind
 from src.domain.entities.deal import Sensitivity
 
@@ -17,11 +17,14 @@ def test_generated_manifest_round_trips(tmp_path):
         == manifest
     )
     assert len(manifest.documents) == 14
+    assert {path.name for path in (tmp_path / "public").glob("*.pdf")} == {
+        document.blob_path for document in manifest.public_documents()
+    }
     assert all(document.expected_deal is not None for document in manifest.documents)
     assert manifest.subject_deal is not None
     assert manifest.subject_deal.deal_id == "DEAL-SUBJECT-001"
     assert manifest.subject_deal.par_amount == 85_000_000
-    assert manifest.subject_allowed_group_claims == [DEAL_TEAM_GROUP]
+    assert manifest.subject_allowed_group_claims == [SUBJECT_ACCESS_GROUP, DEAL_TEAM_GROUP]
 
 
 def test_every_defect_kind_is_present(tmp_path):

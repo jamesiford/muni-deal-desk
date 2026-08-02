@@ -7,6 +7,26 @@ be picked up in VS Code, in a chat assistant, or by another engineer, without re
 context. Each phase states its exit criteria; a phase is not done until they are met and
 validated.
 
+## Current position
+
+| Phase | Status | Result |
+| --- | --- | --- |
+| 1-6 | Complete | Infrastructure, corpus, IQ, MCP, prompt agents and hosted workflow |
+| 7 and 7A | Complete | Private-storage evaluation path and final 25-case two-model runs |
+| 8 | Complete | Local customer-branded React/FastAPI presentation front door |
+| 9 | **Next** | Publish the orchestrator through Copilot Studio into Teams |
+| 10 | Complete | Presenter runbook and end-to-end rehearsal |
+| 11 | Pending | Record and store the fallback walkthrough |
+
+The core Foundry demonstration is complete and can run end to end now. Phase 9 is the
+next implementation phase because the account-team material promises a Copilot Studio
+surface. Phase 11 is the remaining session-readiness task and can proceed in parallel
+because its Phase 10 dependency is already complete.
+
+The frontend is not an Azure service in this topology. `azd up` deploys MCP to Container
+Apps and the orchestrator to Foundry Hosted Agents; the presenter builds React and runs
+the FastAPI bridge locally against the deployed Invocations endpoint.
+
 ## Time budget
 
 Roughly 17 hours of build against a weekend. The critical path is:
@@ -50,9 +70,9 @@ panel a flat line, which defeats the point of showing it.
 - [x] Application Insights receives a test trace
 - [x] No runtime identity holds `Owner` or `Contributor`
 
-**Validation (31 July 2026):** `azd up` completed end to end in 2m35s, deploying the
-Container Apps environment `cae-wdrdcs6ulivnk`, registry `crwdrdcs6ulivnk` and workload
-identity alongside the earlier resources.
+**Final validation (1 August 2026):** `azd up --environment demo-vnet` completed end to
+end in 7m36s, including private corpus upload, IQ reconciliation, evaluation-storage
+smoke, MCP deployment, hosted orchestrator v3 and specialist contract smokes.
 
 `scripts/verify_environment.py` now runs as part of the post-provision hook on every
 `azd up`, because provisioning success is not the same as a working environment. It
@@ -155,10 +175,8 @@ Registered as a Foundry project connection.
 - [x] `compute_debt_service` output matches `DebtServiceCalculator` unit test values
 - [x] Server authenticates with managed identity, no keys
 
-**Validation (31 July 2026):** ACA revision
-`ca-mcp-wdrdcs6ulivnk--azd-1785554904` is healthy and serves streamable HTTP at
-`https://ca-mcp-wdrdcs6ulivnk.jollycoast-a8d3ffc7.westus3.azurecontainerapps.io/mcp`.
-All three tools returned structured output. `DEAL-001` debt service matched the
+**Final validation (1 August 2026):** `ca-mcp-brl2ihmwze6og` is healthy and serves all
+three structured tools over streamable HTTP. `DEAL-001` debt service matched the
 deterministic calculator at $30,000,000 principal and $7,672,500 interest.
 
 The idempotent Foundry project connection `muni-deal-desk-mcp` is registered as a
@@ -193,7 +211,7 @@ duplicate versions.
 - [x] Each returns valid instances of its contract
 - [x] Re-running registration produces no duplicate versions
 
-**Validation (31 July 2026):** Research v2, Analyst v1 and Compliance v1 return
+**Final validation (1 August 2026):** Research v1, Analyst v1 and Compliance v1 return
 provider-enforced Pydantic contracts. Research has separate portal-visible connections
 to Foundry IQ and the Deal Desk MCP; its trace completed both
 `knowledge_base_retrieve` and `find_comparable_deals`. Analyst and Compliance remained
@@ -232,7 +250,9 @@ image repository, superseded hosted versions and validation sessions were delete
 
 ## Phase 7 — Evaluations
 
+**Status:** complete
 **Depends on:** 5
+**Blocked by:** 7A
 
 Roughly 25 graded questions covering comparables selection, figure accuracy, citation
 presence, gap disclosure, entitlement behaviour and guardrail triggers. Graded on
@@ -244,12 +264,60 @@ numbers rather than asserted.
 
 **Exit criteria**
 
-- Evaluation run visible in the Foundry portal
-- Thresholds fail the build when deliberately degraded
-- Two-model comparison produces a defensible cost and quality delta
+- [x] Evaluation run visible in the Foundry portal
+- [x] Thresholds fail the build when deliberately degraded
+- [x] Two-model comparison produces a defensible cost and quality delta
+
+**Validation (1 August 2026):** the committed 25-case local gate passes 100%. Final
+portal evaluation `eval_b23afc8b99554c30a7c8af566abb375d` completed both file-backed
+runs with 25 passed, zero failed and zero errored rows:
+
+- mini: `evalrun_8229604602a64e8b894f8f13d06c1bf8`
+- reasoning: `evalrun_8d1753f9149246d399e97392cf3b010d`
+
+The deterministic Python criterion owns promotion. The fixed `gpt-5.5` score-model
+criterion remains visible as an advisory quality/cost comparison metric; it does not
+override exact contract, figure, citation, gap, entitlement or guardrail evaluators.
+
+## Phase 7A — Hybrid evaluation networking and corpus evidence
+
+**Status:** complete
+**Depends on:** 1, 3
+**Blocks:** Phase 7 portal completion
+
+Recreate the Foundry account in a parallel azd environment with outbound VNet injection
+configured at account creation. Keep Foundry inbound access public and Entra-protected
+for the customer walkthrough, while evaluations reach policy-compliant private Blob
+storage through a private endpoint and private DNS.
+
+Direct Storage Explorer access from the presenter laptop is intentionally outside the
+critical path because it requires P2S VPN, ExpressRoute or a jump host. Instead, `azd up`
+will produce a public-only local corpus view and an Azure-side inventory receipt with
+blob paths and hashes. See `docs/hybrid-evaluation-networking-plan.md`.
+
+**Exit criteria**
+
+- [x] Parallel `azd up` creates the injected Foundry account, Blob private endpoint and
+   DNS without changing the working demo environment
+- [x] Foundry portal and hosted-agent endpoint remain reachable from the presenter laptop
+   without VPN
+- [x] A file-backed portal evaluation processes rows rather than failing at
+   `temporaryDataReference`
+- [x] The full 25-case model comparison completes in Foundry
+- [x] Azure-side inventory matches exactly the 11 public manifest documents
+- [x] No private `pm-*` document appears in Blob, Foundry IQ or the demo-safe folder
+- [x] Cutover and old-account removal occur only after rehearsal passes
+
+**Validation (1 August 2026):** parallel environment `demo-vnet` created Foundry account
+`aif-brl2ihmwze6og` with public inbound access and creation-time VNet injection. Blob
+remains private behind `pe-stbrl2ihmwze6og-blob`; the Foundry evaluation smoke processed
+two file-backed rows and removed its temporary artifacts. `azd up` creates a persistent
+private uploader subnet and identity, uploads exactly 11 public PDFs, and writes
+`src/corpus/out/public-inventory.json` from the Azure-side Blob listing.
 
 ## Phase 8 — Front door application
 
+**Status:** complete
 **Depends on:** 6
 
 React and Vite in plain JSX, served by an async FastAPI backend streaming over SSE.
@@ -270,8 +338,17 @@ streamed events. See ADR-0004 for the event contract.
 - A guardrail violation surfaces as a blocked draft, not a silent edit
 - Runs locally against the deployed backend without a container build
 
+**Validation (1 August 2026):** the desktop app against the hosted orchestrator emitted
+its first stage at 8 seconds, streamed 14 evidence sources and six citations by 36
+seconds, reached approval at 146 seconds, and rendered `Approved` after resume. The
+public persona returned 11 sources, explicit withholding disclosure and no `PM-*`
+records; the deal-team persona returned 14. A fiduciary/investor-recommendation request
+returned a blocked final with no approval bar. Light/dark themes, customer branding and
+the 40px prompt action pass desktop browser checks without horizontal overflow.
+
 ## Phase 9 — Copilot Studio surface
 
+**Status:** next
 **Depends on:** 6
 **First candidate for cutting**
 
@@ -285,6 +362,7 @@ specifically by the account team, and slide 14 of the deck promises it.
 
 ## Phase 10 — Runbook and rehearsal
 
+**Status:** complete
 **Depends on:** 6, 7, 8
 
 `docs/demo-runbook.md` covering the three-part walkthrough: front door application,
@@ -293,12 +371,20 @@ the bulk of the time.
 
 **Exit criteria**
 
-- Full run performed start to finish against the deployed environment
-- Every portal artifact referenced actually loads
-- Timing fits the slot with margin
+- [x] Full run performed start to finish against the deployed environment
+- [x] Every portal artifact referenced actually loads
+- [x] Timing fits the slot with margin
+
+**Validation (1 August 2026):** the presenter runbook now covers the business/domain
+primer, persona experiment, Azure resource inventory, exact corpus, Foundry
+Home/Discover/Build/Operate navigation, agents, models, Content Understanding, MCP,
+Foundry IQ, `DefaultV2`, memory boundaries, data, final evaluations, fine-tuning status,
+tracing and production caveats. The live application sequence was rehearsed against the
+accepted `demo-vnet` deployment.
 
 ## Phase 11 — Fallback recording
 
+**Status:** pending
 **Depends on:** 10
 
 Screen recording of the full walkthrough. The deck's speaker notes already call for

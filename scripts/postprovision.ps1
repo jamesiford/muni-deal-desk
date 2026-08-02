@@ -64,13 +64,6 @@ Write-Host ("  Storage  : {0}" -f $env:AZURE_STORAGE_ACCOUNT_NAME)
 Write-Host ("  Registry : {0}" -f $env:AZURE_CONTAINER_REGISTRY_ENDPOINT)
 Write-Host ''
 
-# --- Wait for role assignment propagation ----------------------------------------
-# Data-plane calls immediately after provisioning can fail with 403 while role
-# assignments replicate. A short wait costs less than a failed deployment.
-Write-Host '  Waiting 30s for role assignments to propagate...' -ForegroundColor DarkGray
-Start-Sleep -Seconds 30
-Write-Host ''
-
 # --- Verify the environment actually works ---------------------------------------
 # Provisioning success is not the same as a working environment, and finding out at
 # demonstration time is not acceptable.
@@ -87,8 +80,13 @@ Invoke-Step -Name 'Generate synthetic corpus' -ScriptPath 'scripts/generate_corp
 Invoke-Step -Name 'Ensure Search private Blob access' -ScriptPath 'scripts/ensure_search_blob_private_link.ps1'
 Invoke-Step -Name 'Upload corpus to blob storage' -ScriptPath 'scripts/upload_corpus.ps1'
 Invoke-Step -Name 'Create Blob knowledge source and knowledge base' -ScriptPath 'scripts/setup_search.ps1'
-Invoke-Step -Name 'Register Foundry IQ connection' -ScriptPath 'scripts/register_knowledge_base_connection.ps1'
-Invoke-Step -Name 'Register specialist agents' -ScriptPath 'scripts/register_agents.ps1'
+Write-Host '  [run ] Register specialist agents' -ForegroundColor Yellow
+& (Join-Path $repoRoot 'scripts/register_agents.ps1') -SkipSmoke
+if ($LASTEXITCODE -ne 0) {
+    throw 'Step failed: Register specialist agents'
+}
+Write-Host '  [ ok ] Register specialist agents' -ForegroundColor Green
+Invoke-Step -Name 'Verify Foundry evaluation storage' -ScriptPath 'scripts/verify_foundry_evaluation.ps1'
 
 Write-Host ''
 Write-Host 'Post-provision setup complete.' -ForegroundColor Green

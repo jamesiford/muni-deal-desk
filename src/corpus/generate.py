@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import shutil
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from decimal import Decimal
@@ -32,6 +33,7 @@ from src.domain.entities.deal import (
 )
 
 DEAL_TEAM_GROUP = "deal-team-private-side"
+SUBJECT_ACCESS_GROUP = "subject-deal-access"
 SYNTHETIC_NOTICE = (
     "SYNTHETIC DEMONSTRATION DOCUMENT. The issuer and all figures are fictional. "
     "No content was derived from MSRB EMMA or another disclosure system."
@@ -737,6 +739,9 @@ def generate_corpus(output_dir: Path | None = None) -> CorpusManifest:
     """Generate all PDFs and return the manifest written beside them."""
     destination = output_dir or Path(__file__).resolve().parent / "out"
     destination.mkdir(parents=True, exist_ok=True)
+    public_destination = destination / "public"
+    shutil.rmtree(public_destination, ignore_errors=True)
+    public_destination.mkdir()
     for generated_file in (*destination.glob("*.pdf"), destination / "manifest.json"):
         generated_file.unlink(missing_ok=True)
 
@@ -749,7 +754,10 @@ def generate_corpus(output_dir: Path | None = None) -> CorpusManifest:
     entries: list[DocumentEntry] = []
     for document in documents:
         filename = f"{document.document_id.lower()}.pdf"
-        page_count = _render(document, destination / filename)
+        generated_pdf = destination / filename
+        page_count = _render(document, generated_pdf)
+        if document.sensitivity is Sensitivity.PUBLIC:
+            shutil.copy2(generated_pdf, public_destination / filename)
         entries.append(
             DocumentEntry(
                 document_id=document.document_id,
@@ -768,7 +776,7 @@ def generate_corpus(output_dir: Path | None = None) -> CorpusManifest:
         generated_at=datetime.now(UTC).isoformat(),
         documents=entries,
         subject_deal=_subject_deal(),
-        subject_allowed_group_claims=[DEAL_TEAM_GROUP],
+        subject_allowed_group_claims=[SUBJECT_ACCESS_GROUP, DEAL_TEAM_GROUP],
     )
     (destination / "manifest.json").write_text(manifest.model_dump_json(indent=2), encoding="utf-8")
     return manifest

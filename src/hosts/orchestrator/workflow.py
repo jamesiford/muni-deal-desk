@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import re
 from dataclasses import dataclass
+from decimal import Decimal
 
 from agent_framework import (
     CheckpointStorage,
@@ -17,7 +18,12 @@ from agent_framework import (
 from opentelemetry import trace
 
 from src.application.mediator import Mediator
-from src.application.messages import Caller, ComputeDebtService, ReviewForCompliance
+from src.application.messages import (
+    Caller,
+    ComputeDebtService,
+    FindComparables,
+    ReviewForCompliance,
+)
 from src.application.ports import AgentPort, ModelPort
 from src.domain.contracts.agent_contracts import (
     AnalystAssessment,
@@ -31,6 +37,7 @@ from src.domain.contracts.agent_contracts import (
     WorkflowPlan,
 )
 from src.domain.entities.deal import DebtServiceSchedule
+from src.hosts.orchestrator.progress import emit_progress, run_stage
 
 RESEARCH_AGENT = "municipal-deal-research"
 ANALYST_AGENT = "municipal-deal-analyst"
@@ -92,10 +99,11 @@ def _draft_text(draft: DraftPackage, schedule: DebtServiceSchedule) -> str:
 
 
 def _merge_reviews(model: ComplianceReview, deterministic: ComplianceReview) -> ComplianceReview:
+    """Keep model findings visible while deterministic controls own blocking."""
     return ComplianceReview(
         findings=[*model.findings, *deterministic.findings],
         requires_human_review=True,
-        blocking=model.blocking or deterministic.blocking,
+        blocking=deterministic.blocking,
     )
 
 
@@ -111,6 +119,7 @@ def _withheld_answer(
         comparables_considered=len(research.comparables),
         total_debt_service=schedule.total_debt_service,
         compliance=compliance,
+        evidence_sources=research.evidence_sources,
         gaps=research.gaps,
         partial_due_to_permissions=research.excluded_by_permission > 0,
         requires_human_review=True,
@@ -128,14 +137,17 @@ def create_deal_desk_workflow(
     @step(name="plan-request")
     async def plan_request(request: DealDeskRequest) -> WorkflowPlan:
         with tracer.start_as_current_span("orchestrator.plan"):
-            return await dependencies.models.invoke(
-                dependencies.router_model,
-                (
-                    "Decompose the municipal request into public research and structural "
-                    "analysis tasks. Do not answer the request or invent facts."
+            return await run_stage(
+                "plan-request",
+                dependencies.models.invoke(
+                    dependencies.router_model,
+                    (
+                        "Decompose the municipal request into public research and structural "
+                        "analysis tasks. Do not answer the request or invent facts."
+                    ),
+                    request.model_dump_json(),
+                    WorkflowPlan,
                 ),
-                request.model_dump_json(),
-                WorkflowPlan,
             )
 
     @step(name="research-public-comparables")
@@ -143,27 +155,63 @@ def create_deal_desk_workflow(
         request: DealDeskRequest,
         plan: WorkflowPlan,
     ) -> ResearchFindings:
+        return await run_stage(
+            "research-public-comparables",
+            _research_public(request, plan),
+        )
+
+    async def _research_public(
+        request: DealDeskRequest,
+        plan: WorkflowPlan,
+    ) -> ResearchFindings:
+        candidates = await dependencies.mediator.send(
+            FindComparables(
+                caller=_caller(request),
+                state=request.state,
+                security_type=request.security_type,
+                par_amount=request.par_amount,
+                months_back=request.months_back,
+                par_tolerance_pct=Decimal("100"),
+                limit=20,
+            )
+        )
         prompt = (
-            f"{plan.research_focus}\nFind public comparables for state={request.state}, "
-            f"security_type={request.security_type.value}, par_amount={request.par_amount}, "
-            f"months_back={request.months_back}. Do not request private-side access."
+            f"{plan.research_focus}\nRetrieve cited public evidence for these deterministic "
+            f"candidate deals: {[deal.deal_id for deal in candidates.comparables]}. "
+            "Use Foundry IQ for public passages. Do not request private-side access."
         )
         with tracer.start_as_current_span("specialist.research"):
-            return await dependencies.specialists.invoke(
+            findings = await dependencies.specialists.invoke(
                 RESEARCH_AGENT,
                 prompt,
                 ResearchFindings,
                 caller=_caller(request),
             )
+        merged = findings.model_copy(
+            update={
+                "comparables": candidates.comparables,
+                "evidence_sources": candidates.evidence_sources,
+                "gaps": [*candidates.gaps, *findings.gaps],
+                "excluded_by_permission": candidates.excluded_by_permission,
+            }
+        )
+        for source in merged.evidence_sources:
+            await emit_progress("evidence", evidence_source=source.model_dump(mode="json"))
+        for citation in merged.citations:
+            await emit_progress("citation", citation=citation.model_dump(mode="json"))
+        return merged
 
     @step(name="compute-subject-debt-service")
     async def compute_subject(request: DealDeskRequest) -> DebtServiceSchedule:
         with tracer.start_as_current_span("tool.compute_debt_service"):
-            return await dependencies.mediator.send(
-                ComputeDebtService(
-                    caller=_caller(request),
-                    deal_id=request.subject_deal_id,
-                )
+            return await run_stage(
+                "compute-subject-debt-service",
+                dependencies.mediator.send(
+                    ComputeDebtService(
+                        caller=_caller(request),
+                        deal_id=request.subject_deal_id,
+                    )
+                ),
             )
 
     @step(name="assess-comparables")
@@ -178,11 +226,14 @@ def create_deal_desk_workflow(
             "private proposed-deal facts."
         )
         with tracer.start_as_current_span("specialist.analyst"):
-            return await dependencies.specialists.invoke(
-                ANALYST_AGENT,
-                prompt,
-                AnalystAssessment,
-                caller=_caller(request),
+            return await run_stage(
+                "assess-comparables",
+                dependencies.specialists.invoke(
+                    ANALYST_AGENT,
+                    prompt,
+                    AnalystAssessment,
+                    caller=_caller(request),
+                ),
             )
 
     @step(name="synthesize-draft")
@@ -200,20 +251,35 @@ def create_deal_desk_workflow(
             f"Deterministic debt service: {schedule.model_dump_json()}"
         )
         with tracer.start_as_current_span("model.synthesize"):
-            return await dependencies.models.invoke(
-                dependencies.synthesis_model,
-                (
-                    "Draft a concise issuer-facing market summary. Preserve citations and "
-                    "evidence gaps. Put citations supporting the summary in summary_citations "
-                    "and citations supporting each section in that section's citations. Do not "
-                    "give legal advice or investor recommendations."
+            draft = await run_stage(
+                "synthesize-draft",
+                dependencies.models.invoke(
+                    dependencies.synthesis_model,
+                    (
+                        "Draft a concise issuer-facing market summary. Preserve citations and "
+                        "evidence gaps. Put citations supporting the summary in "
+                        "summary_citations and citations supporting each section in that "
+                        "section's citations. Do not give legal advice or investor "
+                        "recommendations."
+                    ),
+                    prompt,
+                    DraftPackage,
                 ),
-                prompt,
-                DraftPackage,
             )
+            return draft
 
     @step(name="review-draft")
     async def review_draft(
+        request: DealDeskRequest,
+        draft: DraftPackage,
+        schedule: DebtServiceSchedule,
+    ) -> ComplianceReview:
+        return await run_stage(
+            "review-draft",
+            _review_draft(request, draft, schedule),
+        )
+
+    async def _review_draft(
         request: DealDeskRequest,
         draft: DraftPackage,
         schedule: DebtServiceSchedule,
@@ -227,10 +293,26 @@ def create_deal_desk_workflow(
                 caller=_caller(request),
             )
         with tracer.start_as_current_span("guardrail.deterministic"):
-            deterministic = await dependencies.mediator.send(
+            draft_review = await dependencies.mediator.send(
                 ReviewForCompliance(caller=_caller(request), text=text)
             )
-        return _merge_reviews(model_review, deterministic)
+            request_review = await dependencies.mediator.send(
+                ReviewForCompliance(caller=_caller(request), text=request.question)
+            )
+        request_findings = [
+            finding
+            for finding in request_review.findings
+            if not finding.passed and finding.policy_id != "uncited-figure"
+        ]
+        deterministic = ComplianceReview(
+            findings=[*request_findings, *draft_review.findings],
+            requires_human_review=True,
+            blocking=bool(request_findings) or draft_review.blocking,
+        )
+        review = _merge_reviews(model_review, deterministic)
+        for finding in review.findings:
+            await emit_progress("policy", finding=finding.model_dump(mode="json"))
+        return review
 
     @workflow(
         name="municipal-deal-desk",
@@ -254,6 +336,8 @@ def create_deal_desk_workflow(
                 compliance,
             ).model_dump_json()
 
+        await emit_progress("draft", draft=draft.model_dump(mode="json"))
+
         answer = DealDeskAnswer(
             summary=draft.summary,
             summary_citations=draft.summary_citations,
@@ -261,6 +345,7 @@ def create_deal_desk_workflow(
             comparables_considered=len(research.comparables),
             total_debt_service=schedule.total_debt_service,
             compliance=compliance,
+            evidence_sources=research.evidence_sources,
             gaps=[*research.gaps, *analysis.gaps, *draft.gaps],
             partial_due_to_permissions=research.excluded_by_permission > 0,
             requires_human_review=True,

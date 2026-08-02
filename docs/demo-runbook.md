@@ -1,275 +1,701 @@
-# Demo runbook
+# Municipal Deal Desk demo runbook
 
-customer organization, Microsoft Foundry session. Monday 3 August 2026, 08:00 PDT.
+customer organization and Microsoft Foundry technical session. Monday 3 August 2026,
+08:00 PDT.
 
-Three parts. The application first so the audience sees a working thing, the Azure
-portal briefly so they know what was deployed, then the Foundry portal for the bulk of
-the time.
+This is the presenter narrative, not just a click path. It explains the municipal
+business problem first, shows the application second, and then reveals how Azure and
+Microsoft Foundry implement it.
 
-> **Target-state runbook.** Infrastructure, corpus, Foundry IQ and MCP steps are
-> validated. Application, specialist-agent, orchestrator and evaluation steps remain
-> roadmap work. Do not use this runbook for rehearsal until their phase exit criteria
-> pass.
+**Deployed project**
 
-**Portal navigation verified 31 July 2026** against the deployed project. The new
-Foundry experience uses a top navigation of **Home, Discover, Build, Operate, Docs**,
-which is itself a left-to-right walk. Everything below follows that order.
+| Item | Value |
+| --- | --- |
+| Azure environment | `demo-vnet` |
+| Resource group | `rg-muni-deal-desk-demo-vnet` |
+| Region | `westus3` |
+| Foundry account | `aif-brl2ihmwze6og` |
+| Foundry project | `muni-deal-desk` |
+| Hosted orchestrator | `municipal-deal-desk-orchestrator`, version 3 |
+| Final evaluation | `eval_b23afc8b99554c30a7c8af566abb375d` |
 
-Project: `muni-deal-desk` on account `aif-wdrdcs6ulivnk`, resource group
-`rg-muni-deal-desk-demo`, region `westus3`.
+> **Accuracy boundary.** All issuers, documents, figures and deal-team records are
+> synthetic. Nothing was retrieved from MSRB EMMA. The persona switch demonstrates
+> physical source separation plus application-level group filtering, not end-to-end
+> on-behalf-of authorization. The conduct controls are modelled on regulatory
+> obligations; they do not certify compliance or provide legal advice.
 
-`westus3` is confirmed supported by the new Foundry experience — the project appears in
-the project picker and loads.
+## Session shape
 
----
+| Time | Part | Outcome |
+| --- | --- | --- |
+| 0-8 min | Business and domain primer | The audience understands the job and prompt |
+| 8-20 min | Application | Evidence, persona contrast, controls and approval |
+| 20-28 min | Azure portal and corpus | Deployed footprint and source material |
+| 28-55 min | Foundry portal | Platform artifacts behind the application |
+| 55-60 min | Operate, trace and close | Governance, evidence and next steps |
 
-## Before you start
+The application comes first so the platform discussion is attached to a working
+experience. Spend most of the session in Foundry **Build**.
 
-- [ ] Open three browser tabs: the front-door app, the Azure portal on the resource
-      group, and the Foundry portal on the project
-- [ ] Sign in to the Foundry portal ahead of time and dismiss the "Welcome to the new
-      Microsoft Foundry" dialog; it appears on first load and will interrupt you
-- [ ] Toggle **New Foundry** on. The classic experience has different navigation and
-      the walkthrough below will not match
-- [ ] Run one warm-up question so the first live query is not a cold start
-- [ ] Have the fallback recording open in a fourth tab
-- [ ] Close anything unrelated; the audience will read your tab titles
+## Before the session
 
----
+- [ ] Open the front door, Azure resource group and Foundry project in separate tabs
+- [ ] Turn on **New Foundry**; this follows **Home, Discover, Build, Operate, Docs**
+- [ ] Dismiss the first-run Foundry welcome dialog
+- [ ] Open `src/corpus/out/public` and `src/corpus/out/public-inventory.json` in VS Code
+- [ ] Open `src/hosts/orchestrator/workflow.py` and
+      `src/domain/policies/conduct_policies.py` in VS Code
+- [ ] Warm the application with one complete run
+- [ ] Keep the fallback recording open but out of sight
+- [ ] Confirm the app starts in the **Deal-team member** persona
 
-## Part 1 — The application
+Launch the local front door from a fresh PowerShell session:
 
-**Purpose:** establish that something real works, before any platform discussion.
+```powershell
+azd env select demo-vnet
+npm install --prefix frontend
+npm run build --prefix frontend
+azd env get-values --environment demo-vnet | ForEach-Object {
+  if ($_ -match '^([^=]+)="(.*)"$') { Set-Item "Env:$($matches[1])" $matches[2] }
+}
+python -m src.hosts.front_door
+```
 
-Open the front door. Do not explain the architecture yet.
+Open `http://127.0.0.1:8080`. Keep that shell running throughout the walkthrough.
 
-Paste the question:
+## Part 1 - Business and application
 
-> Baytown ISD is issuing about $85 million of unlimited tax school building bonds this
-> fall. Pull the three most comparable Texas ISD issues from the last 18 months, compare
-> their debt service structure and call features to what we're proposing, flag anything
-> in their continuing disclosure that would affect pricing, and draft the market summary
-> section for our RFP response.
+### What is this application?
 
-While it streams, narrate only what is visible:
+The Municipal Deal Desk is a new-issue intelligence assistant for a public finance
+broker-dealer desk. It helps a banker prepare an issuer-facing response by finding
+comparable municipal bond issues, comparing structures, identifying disclosure facts
+that could affect pricing, and drafting a cited market summary for review.
 
-- Stages appear as the workflow decomposes the question
-- Citations resolve against specific documents
-- The draft assembles with figures carrying source markers
+It does not decide whether an investor should buy a bond, provide legal advice, replace
+a banker, or approve client communication. It accelerates evidence assembly and first
+drafting while preserving source attribution, information barriers, deterministic
+calculations, conduct checks and supervising-principal approval.
 
-**Then the three moments that matter.**
+### What is a municipal Deal Desk?
 
-**Moment one — the gap.** The answer reports that one comparable has no stated call
-provisions. Say: *"It could have guessed a redemption date. It reported the absence
-instead. That is a design decision, and I will show you where it is enforced."*
+A municipal new issue is debt sold by a state or local government entity such as a
+school district. Before an issue is priced, public finance bankers, underwriters,
+traders, analysts and supervisors need a common view of:
 
-**Moment two — the entitlement contrast.** Switch identity from deal-team member to
-public-side analyst. Ask the same question. Fewer comparables return, the internal
-pricing memos are gone, and the answer discloses that results were withheld.
+- the proposed issuer and security pledge
+- recently priced comparable issues
+- maturity and debt-service structure
+- ratings, credit enhancement and call features
+- continuing-disclosure and material-event developments
+- internal pricing experience that a public-side user may not be permitted to see
 
-Say: *"Same question and same agent. Public citations come from the public knowledge
-source; private pricing records are a separate governed source. The application filters
-those records for this caller and tells you the answer is partial rather than quietly
-answering with less."*
+The Deal Desk is the coordination function around that work. The hard part is not
+writing a paragraph. It is joining evidence from several document types, applying
+permission boundaries, calculating figures consistently, surfacing missing or
+conflicting facts, and producing something a supervisor can review.
 
-**Moment three — the refusal.** Ask:
+### Who at customer would care?
+
+The direct business fit is **public finance broker-dealer**, customer organization' broker-dealer, not
+the mortgage or commercial-banking businesses.
+
+| public finance broker-dealer audience | Why this matters |
+| --- | --- |
+| Public Finance bankers | Faster comparable research and RFP market-summary drafting |
+| Municipal underwriting and syndicate | Consistent structure, call and precedent comparison before pricing |
+| Fixed Income Capital Markets, trading and sales | Organized public evidence and internal precedent context |
+| Municipal credit or research professionals | Cited disclosure changes, conflicts and stale information |
+| Supervising principals, Compliance, Legal and Risk | Reviewable controls, source lineage, approval and traces |
+| Technology, Data and AI platform teams | Governed agents, knowledge, tools, evaluation and operations |
+
+At the customer organization level, enterprise technology, cyber, risk, records-management
+and model-governance leaders would care about operating this pattern consistently
+across business units. commercial bank and mortgage business are not the primary users of
+this municipal workflow, although the platform pattern can transfer to their regulated,
+document-heavy processes.
+
+### The two demo personas
+
+These are fixed presentation personas mapped to explicit application claims. They are
+not a claim that the end user's Entra token reaches every source.
+
+| Persona | Claims | Evidence available |
+| --- | --- | --- |
+| Deal-team member | Subject-deal plus private-side deal-team access | 11 public documents and 3 internal pricing memos |
+| Public-side analyst | Subject-deal access only | 11 public documents; 3 private records withheld and disclosed |
+
+Public-side and private-side separation matters at a broker-dealer because a person may
+be restricted from material or deal-confidential information. A useful assistant must
+not simply return fewer facts silently. It must apply the boundary and tell the caller
+when the answer is partial.
+
+### Why this prompt is significant
+
+Use the prompt already loaded in the app:
+
+> Gulf Lantern Fictional ISD is issuing about $85 million of unlimited tax school
+> building bonds this fall. Pull the most comparable Texas ISD issues from the last
+> 18 months, compare debt service and call features, flag evidence gaps, and draft the
+> market summary section for our RFP response.
+
+This is intentionally one compound banker request, not a chatbot trivia question.
+
+| Prompt term | Meaning and why it changes the work |
+| --- | --- |
+| Gulf Lantern Fictional ISD | The proposed subject issuer; fictional by design |
+| About $85 million | Par amount used to select similarly sized precedents |
+| Unlimited tax | An unlimited ad valorem tax pledge; compare like security structures |
+| School building bonds | Capital-purpose debt with a maturity and debt-service profile |
+| This fall | Pricing context is time-sensitive |
+| Texas ISD | Narrows issuer type, state framework and likely PSF-enhanced peers |
+| Last 18 months | Prevents stale market precedents from dominating the set |
+| Most comparable | Requires deterministic filtering plus qualitative assessment |
+| Debt service | Principal and interest burden by period; calculated, not generated |
+| Call features | Optional redemption rights that affect value and pricing |
+| Evidence gaps | Missing, conflicting, late or stale facts must be disclosed, not guessed |
+| RFP response | Issuer-facing business communication that requires supervision |
+
+The prompt forces the system to decompose a task, use public narrative retrieval and
+typed private records, call deterministic tools, coordinate specialists, draft with
+citations, apply conduct controls, and stop for a human decision. That is why it is a
+useful Foundry demonstration.
+
+### What is a call provision?
+
+A call provision gives the issuer the right, but not the obligation, to redeem bonds
+before their stated maturity under specified terms. The important fields are the first
+call date, call price and whether a bond is non-callable.
+
+Call protection changes economic value. If rates fall, an issuer may refinance callable
+bonds; the investor receives principal back and must reinvest at lower rates. Two bonds
+with similar issuer, rating and maturity are not clean pricing comparables if one is
+callable earlier or at a different price. This is why the absence of a stated call
+provision is a material evidence gap. The correct answer is "not stated," not an
+industry-standard date invented by the model.
+
+### What do the private citations add?
+
+`PM-001`, `PM-002` and `PM-003` are synthetic internal pricing memos for Blue Mesa,
+Lone Heron and Red Bluff. They carry comparable maturity scales and yields plus the
+deal team's working view of the issue, call structure and enrollment trend.
+
+Their value is the firm's own precedent context: information available to an authorized
+deal team but not part of the public disclosure corpus. Public official statements can
+show what was offered; an internal memo can preserve how the desk framed that precedent
+for pricing. The demo keeps those records out of Foundry IQ entirely and exposes them
+only through the typed repository behind MCP. Do not say the private memos came from
+Blob or Foundry IQ.
+
+### Live application sequence
+
+#### 1. Deal-team run
+
+Start as **Deal-team member** and run the loaded prompt. While it streams, point to:
+
+- six named workflow stages rather than a generic spinner
+- 14 evidence sources, including the three `PM-*` private records
+- citations arriving before the final answer
+- computed debt service and structural comparisons
+- explicit evidence gaps rather than inferred facts
+- the supervising-principal approval gate
+
+Say: *"The user sees progress because this is a multi-minute workflow, not one model
+completion. Research, calculations, analysis, drafting and controls are separate steps."*
+
+Approve the clean draft. The final state should read **Approved**.
+
+#### 2. Same prompt, public-side persona
+
+Start a new run, switch to **Public-side analyst**, and submit the exact same prompt.
+Point out:
+
+- 11 sources rather than 14
+- no `PM-*` source or citation
+- the explicit disclosure that three records were withheld
+- a partial answer that still requires review
+
+Say: *"The business question did not change; the caller's entitlement did. Asking the
+same prompt is the controlled experiment. It proves that evidence selection is a
+separate concern from prompt wording."*
+
+Then be precise: *"Public documents are physically isolated in Foundry IQ. Private
+records are filtered in application code using caller group claims. This is not an
+on-behalf-of implementation."*
+
+#### 3. Missing evidence
+
+Open the Copper Star comparable and its missing call provision. Say: *"A fluent model
+could fill this with a customary redemption date. This system reports the absence, and
+the evaluation suite has a critical case that fails if it invents one."*
+
+The corpus also contains three other deliberate quality traps:
+
+- North Lantern enrollment is `12,840` in `OS-006` and `13,215` in `CD-001`
+- Juniper Bend's annual disclosure was due 28 February 2026 and filed 17 April 2026
+- Silver Cactus uses financial statements only through 31 August 2023 in a July 2026
+  official statement
+
+#### 4. Conduct-control refusal
+
+Ask:
 
 > Which of these bonds should I recommend to a client?
 
-It refuses. Say: *"That is not a content filter declining a rude question. That is a
-firm conduct rule, and it is enforced in code that does not depend on the model
-cooperating."*
+The workflow should block before approval and should not expose a pre-review draft.
 
-Do not explain how any of it works yet. That is the next hour.
+Say: *"This is not a generic content filter objecting to the topic. The request is
+outside this issuer-facing underwriting workflow, and a deterministic firm conduct rule
+blocks it even if a model would otherwise answer."*
 
----
+### What the front door is built from
 
-## Part 2 — What was deployed
+The branded interface is React 19 and Vite in plain JSX. A small FastAPI bridge maps the
+selected presentation persona to typed claims and streams the hosted agent's Invocations
+events over SSE. It contains no pricing, entitlement or compliance logic. Those rules
+live behind the application mediator and are shared by the hosted workflow and MCP.
 
-**Purpose:** short. Establish the footprint, then move on.
+## Part 2 - Azure resource group and corpus
 
-Azure portal, resource group `rg-muni-deal-desk-demo`. Focus on these resources:
+Open Azure portal resource group `rg-muni-deal-desk-demo-vnet`. The point is not to
+inspect every property; it is to establish that the application is a composed, governed
+workload rather than one opaque endpoint.
 
-| Resource | Role |
-| --- | --- |
-| `aif-wdrdcs6ulivnk` | Foundry account and project |
-| `srch-wdrdcs6ulivnk` | Azure AI Search behind the knowledge base |
-| `stwdrdcs6ulivnk` | Corpus documents |
-| `ca-mcp-wdrdcs6ulivnk` / `cae-` / `cr-` | MCP app, Container Apps environment and registry |
-| `id-wdrdcs6ulivnk` | MCP workload identity; hosted orchestrator has a dedicated Foundry identity |
-| `appi-` / `log-` | Application Insights and Log Analytics |
+### Deployed services
 
-Two points worth making here and nowhere else:
+| Azure resource | What it does here | Why it is needed |
+| --- | --- | --- |
+| Foundry account `aif-brl2ihmwze6og` | AI Services account, project parent, models, Content Understanding and outbound injection | Governed control plane for models and AI services |
+| Foundry project `muni-deal-desk` | Owns agents, connections, files, evaluations and traces | Durable application-team and portal boundary |
+| Four model deployments | Extraction, reasoning, routing and embeddings | Match model cost/capability to each task |
+| AI Search `srch-brl2ihmwze6og` | Blob ingestion pipeline and Foundry IQ retrieval | Hybrid/vector retrieval, index lifecycle and citations |
+| Storage `stbrl2ihmwze6og` | Holds 11 public PDFs and project evaluation data | Durable private source with shared keys disabled |
+| VNet `vnet-brl2ihmwze6og` | Foundry injection, private endpoint and uploader subnets | Private path from managed workloads to Blob |
+| Blob private endpoint and private DNS | Resolves and routes Blob privately | Tenant policy prohibits usable public Blob access |
+| Container App `ca-mcp-brl2ihmwze6og` | Hosts the streamable HTTP MCP server | Reusable typed business tools for agents |
+| Container Apps environment `cae-*` | Managed runtime and ingress for MCP | TLS, revisions, scaling and logs |
+| Container Registry `crbrl2ihmwze6og` | Stores MCP and temporary uploader images | Reproducible private container deployment |
+| MCP managed identity `id-*` | Authenticates MCP without secrets | Least-privilege Azure access and telemetry |
+| Corpus-uploader identity `id-corpus-uploader-*` | Authenticates the short-lived private uploader | Uploads without storage keys |
+| Application Insights `appi-*` | Receives agent, workflow, MCP and model spans | Trace and token evidence |
+| Log Analytics `log-*` | Workspace for telemetry and Container Apps logs | Queryable operational retention |
 
-- The whole environment is one `azd up`. Infrastructure, role assignments, private
-      corpus upload, Blob knowledge source, knowledge base and MCP registration.
-- There are no keys. Local authentication is disabled on the Foundry account and shared
-  key access is disabled on storage. Everything runs on Entra identity and role
-  assignment.
+The native hosted orchestrator is a Foundry project artifact with a dedicated platform
+identity. It is intentionally not a second Container App. The short-lived ACI corpus
+uploader is deleted after each successful upload; it should not remain in the group.
 
-If asked about private networking: interactive surfaces are public with Entra auth so the
-demo works from a laptop. Blob Storage is private; Search uses a shared private link and
-the corpus uploader uses a transient private endpoint. A production topology would
-isolate the remaining surfaces as well. **Do not imply this hybrid deployment is a
-production pattern.**
+### Identity and network story
 
-Move on within five minutes.
+Two statements are enough:
 
----
+1. *"There are no application keys. Foundry local auth and Storage shared-key access are
+   disabled; workloads use Entra identities and scoped role assignments."*
+2. *"The Foundry portal and hosted agent are public and Entra-protected for this laptop
+   demo. Foundry outbound evaluation traffic is VNet-injected, Blob is private, Search
+   uses an approved shared private link, and corpus upload runs inside the VNet."*
 
-## Part 3 — The Foundry portal, left to right
+This hybrid shape preserves a browser-accessible demonstration while satisfying private
+Blob policy. It is not a production landing zone. Production design would also assess
+private inbound access, OBO identity, enterprise networking, threat modelling, records
+retention and operational separation.
 
-**Purpose:** the substance. Walk the top navigation in order.
+### One-command lifecycle
+
+The complete environment is reconciled by:
+
+```powershell
+azd up --environment demo-vnet
+```
+
+That command provisions Bicep, applies RBAC, verifies both chat model tiers, generates
+the corpus, uploads exactly 11 public PDFs through the private endpoint, reconciles
+Foundry IQ and Content Understanding, registers specialists, runs a private-storage
+evaluation smoke, deploys MCP and hosted orchestrator version 3, then runs contract
+smokes.
+
+### The document corpus
+
+The generator creates 14 one-page synthetic PDFs and a machine-readable manifest. Only
+11 public PDFs are uploaded to the Foundry IQ Blob prefix.
+
+| Document type | Count | What it tells the desk |
+| --- | ---: | --- |
+| Official statement (`OS`) | 8 public | Offering terms, issuer facts, pledge, ratings, maturity scale, yields, calls and financial period |
+| Annual continuing disclosure (`CD`) | 2 public | Post-issuance operating/debt updates and filing timeliness |
+| Material event notice (`ME`) | 1 public | A significant post-issuance event; here, an underlying rating change |
+| Internal pricing memo (`PM`) | 3 private | Deal-team precedent scale, yields and working pricing context |
+
+**Official statements.** These are the primary offering documents for eight fictional
+Texas ISD issues from $30 million to $150 million. Three are deliberately notable:
+
+- `OS-003`, Copper Star: no call provision is stated
+- `OS-006`, North Lantern: enrollment conflicts with `CD-001`
+- `OS-008`, Silver Cactus: financial statements are stale
+
+**Continuing disclosures.** `CD-001` creates the North Lantern enrollment conflict.
+`CD-002` was filed late, which may affect the desk's view of disclosure discipline and
+requires review.
+
+**Material event notice.** `ME-001` reports Cedar Prairie's fictional underlying
+Moody's change from Aa1 to Aa2 while its enhanced S&P rating remains AAA. It shows why a
+desk cannot rely only on the original offering document.
+
+**Internal pricing memos.** `PM-001`, `PM-002` and `PM-003` cover Blue Mesa, Lone Heron
+and Red Bluff. They are private typed fixtures, never uploaded under `pdf/public`, and
+exist to make the persona contrast inspectable and testable.
+
+### How to show private Blob safely
+
+Do not open Storage Browser or Storage Explorer. Those tools read Blob from the
+presenter's laptop and require VPN or a jump host when public access is disabled.
+
+Show these together instead:
+
+1. `src/corpus/out/public`, containing exactly 11 demo-safe PDFs
+2. `src/corpus/out/public-inventory.json`, emitted by the uploader inside Azure
+3. Foundry IQ's 11-document source count and returned citations
+
+The inventory records Blob path, document ID, byte length and source SHA-256 for exact
+manifest parity. The full local output also contains the three `PM-*` private fixtures;
+do not describe the entire folder as the Blob container.
+
+## Part 3 - Microsoft Foundry portal
+
+Follow the top navigation left to right: **Home, Discover, Build, Operate**. The reason
+Foundry fits should emerge from the artifacts: the portal and source code expose the
+same agents, models, tools, knowledge, controls, evaluations and traces to different
+roles.
 
 ### Home
 
-Land here. Three things are visible without clicking anything:
+**Show** the `Municipal Deal Desk` project card, endpoint and authentication status.
 
-- **Project endpoint** — what the application actually calls
-- **API key: "API key authentication is disabled for this project."** Point at it. For a
-  bank, that sentence is worth more than a slide about security
-- **Model selection** and recent work
+**Say:** *"This project is the durable boundary for the application. The endpoint is
+what our code calls. API key authentication is disabled, so access is through Entra and
+managed identity."*
+
+Use Home to orient, not to explain the solution.
 
 ### Discover
 
-The model catalogue. Keep it brief — the point is breadth and that model choice is not
-an architectural commitment.
+**Show** the model catalogue and open one deployed model family.
 
-Say: *"Eleven thousand models, one API. We chose three for this workload. Swapping them
-is a configuration change, not a rewrite."*
+**Say:** *"Model choice is a workload decision, not an application rewrite. We use a
+smaller model for high-volume extraction and compliance tasks, a reasoning model for
+analysis and synthesis, an embedding model for retrieval, and a router to demonstrate
+policy-based selection."*
 
-### Build
+Do not quote a catalogue model count; it changes.
 
-The left navigation under Build is grouped **Create** and **Optimize**, and it maps
-almost exactly onto what was built. Walk it top to bottom.
+### Build - Agents
 
-**Agents.** The three specialists — Research, Analyst, Compliance — each a registered
-prompt agent with its own version. Open one. Show the instructions, the bound model, the
-structured output schema.
+Open **Build > Agents**. Four durable agents should be visible.
 
-Say: *"These are editable here. Your team does not need my laptop to change how the
-Analyst reasons."*
+| Agent | Kind | Model | Responsibility |
+| --- | --- | --- | --- |
+| `municipal-deal-research` v1 | Prompt agent | `gpt-5.4-mini` | Candidate lookup plus cited public retrieval; reports gaps |
+| `municipal-deal-analyst` v1 | Prompt agent | `gpt-5.5` | Uses deal/debt-service tools and explains structures |
+| `municipal-deal-compliance` v1 | Prompt agent | `gpt-5.4-mini` | Structured model review for conduct and human review |
+| `municipal-deal-desk-orchestrator` v3 | Hosted workflow | Mixed | Plans, invokes, synthesizes, controls and pauses for approval |
 
-Then the orchestrator: a hosted Agent Framework workflow. This is the moment to contrast
-the two build surfaces — declarative agents you edit in a browser, and pro-code
-orchestration you edit in VS Code. Have VS Code ready to switch to.
+Open Research. Show its instructions, tools and structured `ResearchFindings` format.
+Point out its two connections: custom MCP for candidates and Foundry IQ for public
+passages.
 
-**Models.** Four deployments: `gpt-5.4-mini` for extraction, `gpt-5.5` for synthesis,
-`model-router`, `text-embedding-3-large` for embeddings.
+Open Analyst. Show that figures require `get_deal` and `compute_debt_service` before
+discussion. The model interprets a schedule; it is not the source of the arithmetic.
 
-Say: *"Extraction runs on the cheap model. Synthesis runs on the expensive one. That is
-a per-task decision, and the cost difference is visible in Operate."*
+Open Compliance. Show the typed `ComplianceReview`, then state that model review is not
+the final control.
 
-**Services** and **Tools.** The MCP server connection. Show the tool list — the debt
-service calculator and deal lookup.
+Open the orchestrator and contrast the authoring surfaces:
 
-Say: *"This is our own code, exposed over MCP. The agent chose to call it. Critically,
-the debt service numbers are computed arithmetically, not generated. A model describes
-the schedule; it does not produce it. That is the difference between a demo and
-something you could put in front of a client."*
+- prompt specialists use `PromptAgentDefinition` and are inspectable, versioned and
+  testable in the portal
+- the orchestrator is a checkpointed Agent Framework workflow authored in Python and
+  deployed as source to Foundry Hosted Agents
 
-Then open the separate `municipal-deal-foundry-iq` connection on Research. Show that
-`knowledge_base_retrieve` belongs to Foundry IQ, while `find_comparable_deals` belongs
-to our custom MCP. The protocol is shared; the capabilities and ownership are distinct.
+Switch briefly to `src/hosts/orchestrator/workflow.py`. Point to typed messages, parallel
+research/debt-service work, deterministic review and the approval checkpoint. Internal
+specialist wiring uses the workflow, not A2A.
 
-**Knowledge.** Open `municipal-deal-pdf-blob-source`. Show `kind: azureBlob`, the public
-`pdf/public` folder, and the generated data source, skillset, index and indexer. Then open
-`municipal-deal-knowledge-base`: `gpt-5.4-mini`, low reasoning, extractive data, and the
-retrieval instructions. Point out that answer instructions are blank because specialists
-own synthesis.
+**Why this matters:** Foundry supports prompt iteration and pro-code workflow control
+without forcing every component into one authoring model.
 
-Be precise here: *"The knowledge source contains public documents only. Private pricing
-records are kept in a separate typed repository and filtered in application code using
-caller group claims. The agent uses its own managed identity, so this is not
-on-behalf-of enforcement. OBO is a different, stronger design."*
+### Build - Models
 
-That precision will earn more credibility than the feature does.
+Open **Models** or **Deployed models**.
 
-**Guardrails.** Content safety and jailbreak defence at the platform layer.
+| Deployment | Purpose in this solution |
+| --- | --- |
+| `gpt-5.4-mini` | Research extraction, Compliance review and IQ query planning |
+| `gpt-5.5` | Analyst reasoning, synthesis and advisory score-model evaluation |
+| `model-router` | Inspectable optional runtime-selection capability; the live workflow pins task models |
+| `text-embedding-3-large` | Integrated vectorization for the knowledge base |
 
-Then make the two-layer point: *"This is one layer. The conduct rules you saw refuse a
-recommendation are a second, independent layer in our domain code. A prompt change
-cannot disable them, and they are deterministic — same input, same finding, every
-time."*
+Say: *"We allocate model capability by task. Evaluations make the cost-quality tradeoff
+measurable instead of assumed."*
 
-**Memory.** Thread and memory state. Worth thirty seconds.
+### Build - Services and Content Understanding
 
-*"Managed by Microsoft inside the project's regional boundary here. If you need it in
-your own subscription, Standard Agent Setup points threads and memory at a Cosmos DB
-account you own, under your keys and your retention policy. Deployment-time choice; the
-agent code is unchanged."*
+Open **Services > Content Understanding** and analyzer
+`municipal_deal_extraction`.
 
-**Data.** Corpus documents. Reiterate that everything is synthetic — fictional issuers,
-nothing retrieved from any disclosure system.
+It uses the prebuilt document analyzer with layout, OCR, confidence and source
+estimation. Its typed schema extracts issuer, security type, par, dates, ratings, call
+provision, and each maturity's principal, coupon and yield.
 
-**Evaluations.** Under Optimize. The graded golden set: groundedness, retrieval
-relevance, citation accuracy. Show a run.
+The analyzer was validated against the manifest for all 14 PDFs. Be precise about its
+role: it is a durable demonstration of structured extraction. The live Research path
+uses Foundry IQ for public narrative evidence and the packaged manifest repository for
+typed candidate records. Do not imply the live answer is populated from Content
+Understanding output.
 
-Say: *"This gates promotion in CI. An agent version that scores below threshold does not
-ship. This is the answer to 'how do you know it still works after you change the
-prompt.'"*
+This shows two complementary document jobs:
 
-If the two-model comparison survived the build, show it here: same suite, two model
-tiers, real cost and quality numbers.
+- Content Understanding turns a document into a typed business record
+- Foundry IQ retrieves cited passages to ground an answer
 
-**Fine-tune.** Mention and move on. Not used, and saying so is more honest than
-implying it.
+### Build - Tools and MCP
+
+Open **Tools** and connection `muni-deal-desk-mcp`. Show three streamable HTTP tools:
+
+| Tool | Purpose |
+| --- | --- |
+| `find_comparable_deals` | Filters state, security, size, age and claims; returns withheld count |
+| `get_deal` | Returns one entitled deal without revealing whether an absent record was barred |
+| `compute_debt_service` | Computes principal, interest and total debt service arithmetically |
+
+Say: *"MCP is the contract between an agent and reusable business capabilities. Foundry
+can discover the tool, while calculation and entitlement logic remain normal tested
+application code."*
+
+The server runs in Container Apps with its own managed identity. MCP and the hosted
+orchestrator use the same hand-rolled mediator, so rules and calculations are not
+duplicated.
+
+Open connection `municipal-deal-foundry-iq`. Both speak MCP, but ownership differs:
+
+- `knowledge_base_retrieve` is a Foundry IQ capability over public documents
+- the three Deal Desk tools are custom application capabilities
+
+### Build - Knowledge and Foundry IQ
+
+Open Blob knowledge source `municipal-deal-pdf-blob-source` and show:
+
+- kind `azureBlob`
+- container path `corpus/pdf/public`
+- 11 processed public documents
+- source-generated Search data source, skillset, index and indexer
+
+Open `municipal-deal-knowledge-base` and show:
+
+- `gpt-5.4-mini` query planning with low reasoning effort
+- `extractiveData` output
+- municipal-document retrieval instructions
+- blank answer instructions because specialists own synthesis
+
+Say: *"Foundry IQ owns retrieval planning and cited extractive evidence. Research owns
+the answer. We deliberately did not create a second hand-managed index."*
+
+Repeat the boundary once: IQ is public-only. Private pricing memos remain in the typed
+repository and are filtered by the application. The hosted agent uses managed identity,
+not the end user's delegated identity.
+
+### Build - Guardrails
+
+Open **Guardrails** and platform guardrail `DefaultV2`.
+
+`DefaultV2` is the platform baseline for content-safety categories and jailbreak
+defence. It was not customized for municipal underwriting here. It is valuable, but it
+does not know that an underwriter must not imply municipal-advisor or fiduciary standing.
+
+Then show `src/domain/policies/conduct_policies.py` and the second layer:
+
+| Deterministic policy | What it blocks |
+| --- | --- |
+| `msrb-g17-fiduciary-implication` | Advisor, municipal-advisor or fiduciary claims |
+| `retail-recommendation-out-of-scope` | Investor-directed buy or suitability recommendations |
+| `uncited-figure` | Money or rate statements without a citation marker |
+
+These policies run against the request and generated draft. A blocked request never
+exposes a draft or reaches approval. Every allowed client-facing answer still sets
+`requires_human_review=true`.
+
+Say: *"Platform safety and firm conduct are independent controls. A prompt edit can
+change agent behavior; it cannot edit these domain policies."*
+
+### Build - Memory
+
+Open **Memory** and state the status plainly.
+
+This demo does **not** implement bring-your-own memory or a Cosmos DB memory store.
+Workflow checkpoints and hosted-agent session state support the in-flight approval,
+while persistent thread/memory storage uses the platform-managed project configuration.
+
+For a production regulated workload, Standard Agent Setup can place thread and memory
+data in customer-owned Cosmos DB with customer-defined networking, keys, retention and
+lifecycle controls. That choice belongs with records-management and privacy design. It
+was omitted to keep a fixed-date demo focused and reliable.
+
+Do not claim custom long-term user memory, cross-session personalization, BYO Cosmos or
+a firm retention policy.
+
+### Build - Data
+
+Open **Data**. The retained final evaluation inputs are:
+
+- `muni-deal-desk-phase-7-final-mini.jsonl`
+- `muni-deal-desk-phase-7-final-reasoning.jsonl`
+
+These are durable, file-backed 25-row datasets used by the final portal runs. The public
+PDF corpus is not duplicated here; it belongs under Knowledge as a private Blob-backed
+source. Evaluation data and retrieval knowledge have distinct purposes and lifecycles.
+
+### Build - Evaluations
+
+Open `muni-deal-desk-phase-7-final`, ID
+`eval_b23afc8b99554c30a7c8af566abb375d`.
+
+The suite contains exactly 25 human-reviewable cases:
+
+| Category | Cases | What can fail |
+| --- | ---: | --- |
+| Comparable selection | 6 | Wrong, duplicate or misordered deal IDs |
+| Debt-service figures | 4 | Principal, interest or total differs by any amount |
+| Citation integrity | 4 | Missing/wrong source or private leakage |
+| Gap disclosure | 4 | Missing call, conflict, late filing or stale data hidden |
+| Entitlement contrasts | 3 | Wrong withheld count, partiality or private visibility |
+| Guardrails | 4 | Required block/review behavior not enforced |
+
+Show both final runs:
+
+| Configuration | Run ID | Result |
+| --- | --- | --- |
+| Mini | `evalrun_8229604602a64e8b894f8f13d06c1bf8` | 25 passed, 0 failed, 0 errored |
+| Reasoning | `evalrun_8d1753f9149246d399e97392cf3b010d` | 25 passed, 0 failed, 0 errored |
+
+Open a row and show two graders:
+
+- `deterministic_gate` is Python over typed expected results and owns promotion
+- `expected_behavior_quality` uses fixed `gpt-5.5` as an advisory score-model criterion
+
+Say: *"A model does not grade exact arithmetic, permissions or required source IDs.
+Those are deterministic. A score model adds qualitative evidence but cannot override a
+failed critical contract check."*
+
+The local gate evaluated genuine collected outputs and passed 100% for both model
+configurations. The file-backed portal runs prove managed evaluation can read through
+the private Blob path and produce durable results. CI blocks promotion when deterministic
+thresholds fail.
+
+### Build - Fine-tuning
+
+Open **Fine-tuning** only long enough to locate it. No model was fine-tuned here.
+
+Say: *"We started with retrieval, tools, structured contracts, prompt agents and
+evaluation. Fine-tuning is appropriate when repeated evaluation reveals a stable
+behavior gap that examples can teach and retrieval or instructions cannot solve. It is
+not the first answer to missing knowledge, current data or deterministic math."*
+
+The 25-case suite would be the baseline a future fine-tuned candidate must beat without
+regressing critical controls.
 
 ### Operate
 
-The control plane. Left navigation: **Overview, Assets, Compliance, Quota, Admin**.
+Move to **Operate**. Portal labels may evolve, but cover these responsibilities:
 
-**Overview.** Active alerts, estimated cost, agent success rate, token usage, and
-success-rate trends.
+| Surface | What to say |
+| --- | --- |
+| Overview | Success, latency, token and cost trends turn one run into an operated workload |
+| Assets | Inventory answers which agents and versions exist; only orchestrator v3 remains active |
+| Compliance | Connect posture to enterprise governance; do not claim Purview or Agent ID integration |
+| Quota | Capacity and throughput are dependencies; PTU is a future option, not used here |
+| Admin | Project access, connections and configuration are governed apart from prompts |
 
-Say: *"One agent is a project. Sixty agents is an estate. This is the screen that
-matters when you get to sixty — and note the cost is attributed, so a business unit can
-be charged for what it used."*
+The shift from Build to Operate is the platform argument: a prototype answers one
+question; an enterprise platform inventories, measures and governs an agent estate.
 
-**Assets.** Inventory of every agent. The governance answer to "what do we actually
-have running."
+### Tracing and observability
 
-**Compliance.** Where the compliance posture surfaces. Connect to Purview and Entra
-Agent ID if the conversation goes that way.
+End on a trace from the application run. Walk the span tree:
 
-**Quota.** Capacity and throughput. Mention PTU for predictable latency if a
-capacity-planning question comes up.
+- planning
+- Research and Analyst specialist calls
+- Foundry IQ and MCP calls
+- synthesis model call and token usage
+- model Compliance review
+- deterministic guardrail review
+- approval checkpoint and resume
 
-**Admin.** Project access and configuration.
+Say: *"This is the same workflow we watched from the user's side, now visible from the
+operator's side. We can see what was called, what evidence returned, which model ran,
+where time was spent and why the workflow stopped."*
 
-### Tracing
+Application Insights and Log Analytics receive OpenTelemetry data. Tracing supports
+debugging and governance evidence; it is not by itself a complete books-and-records
+program. Retention, redaction, access and supervision remain production decisions.
 
-Open a trace from the run in Part 1. This is the closing move, and arguably the single
-most persuasive screen in the session.
+## Why Foundry for this solution?
 
-Walk the tree: decomposition, each retrieval, the tool call, each model call with its
-token count.
+Close by connecting platform capabilities to requirements already shown.
 
-Say: *"Every step. What it asked, what came back, which tool it chose, what it cost. We
-added no instrumentation to get this. When your risk function asks why the agent said
-something in March, this is the answer."*
+| Requirement | Foundry role |
+| --- | --- |
+| Different models for different jobs | Model catalogue, deployments and project API |
+| Inspectable specialist behavior | Versioned prompt agents with tools and schemas |
+| Pro-code multi-agent control | Hosted Agent Framework workflow and managed identity |
+| Grounded public evidence | Foundry IQ knowledge source, knowledge base and citations |
+| Firm-owned calculations and lookup | MCP connections to tested business tools |
+| Safety plus firm policy | Platform guardrail plus deterministic application controls |
+| Human accountability | Typed approval checkpoint before completion |
+| Measured change | Durable datasets, evaluation runs and promotion gate |
+| Operational evidence | Traces, token/cost telemetry, assets and quota |
+| Enterprise access | Entra identities, scoped RBAC and private outbound data path |
 
----
+The core value is not that Foundry writes a market summary. It is that the same platform
+makes models, agents, data connections, tools, evaluations, identities and traces
+durable and inspectable while firm-specific logic remains source-controlled code.
+
+## Closing questions
+
+1. Which public-finance workflow has enough repeated document work to justify a pilot?
+2. Which information barriers and systems of record must be authoritative in production?
+3. What evidence would Compliance, supervision and model governance require before use?
+4. Which team owns the first increment: Public Finance, enterprise AI, or a joint team?
+
+Leave with owners for a business-workflow session and an architecture/security session.
 
 ## If something breaks
 
 | Failure | Response |
 | --- | --- |
-| App will not stream | Switch to the Foundry playground and run the same question |
-| Portal slow or erroring | Fallback recording, tab four |
-| Agent returns an error | Do not debug live. Move to Part 3; the artifacts still tell the story |
-| Question about a cut feature | Say it was out of scope for the session and offer it as a follow-up |
+| App does not stream | Use the hosted orchestrator playground and explain the same stages |
+| Live run is cold or slow | Explain the resources/corpus, then return to the completed run |
+| Portal is slow | Use the fallback recording and corresponding VS Code artifact |
+| Private Blob cannot open from laptop | Expected; show inventory receipt and IQ count |
+| Agent returns an error | Open a prior trace/evaluation; do not debug live |
+| Asked about OBO | Not implemented; describe it as the stronger production path |
+| Asked about Cosmos memory | BYO memory is not implemented; explain Standard Agent Setup |
+| Asked about fine-tuning | Not used; evaluation must establish a stable learning target first |
 
-Never debug in front of the customer. The recording exists for this.
+## Quick glossary
 
----
-
-## Closing
-
-Return to the invite's third item: next steps, owners, follow-ups.
-
-- Which of the candidate use cases is real for customer
-- The architecture and security session with Emory Long
-- Scoping the first increment
-
-Do not leave without a named owner against at least the first two.
+| Term | Short definition |
+| --- | --- |
+| ISD | Independent school district |
+| Par amount | Principal amount issued |
+| Unlimited tax bond | Bond payable from an unlimited ad valorem tax pledge, subject to law |
+| Texas PSF enhancement | Credit enhancement through the Texas Permanent School Fund program |
+| Comparable | A prior issue similar enough to inform structure or pricing context |
+| Debt service | Scheduled principal plus interest |
+| Call provision | Terms allowing issuer redemption before maturity |
+| Official statement | Primary offering disclosure document for a municipal issue |
+| Continuing disclosure | Post-issuance financial or operating filing |
+| Material event notice | Notice of a specified significant post-issuance event |
+| RFP | Request for proposals for underwriting or related services |
+| MCP | Model Context Protocol, used here for typed business tools |
+| Foundry IQ | Foundry knowledge layer used here for planned, cited retrieval |
+| OBO | On-behalf-of token flow carrying user identity downstream |
+| PTU | Provisioned throughput units for predictable model capacity |

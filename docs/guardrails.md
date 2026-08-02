@@ -14,10 +14,12 @@ depends on a model behaving is not a control.
 | Layer | Mechanism | Fails independently of |
 | --- | --- | --- |
 | Deterministic conduct policies | Regex-based checks in `src/domain/policies` | Model behaviour, prompt wording, model version |
-| Platform content safety | Foundry content filters and jailbreak defence | Application code |
+| Platform content safety | Foundry `DefaultV2` content filters and jailbreak defence | Application code |
 
 The deterministic layer is the one to demonstrate. It produces the same finding on every
 run, which is what makes it showable, and it cannot be disabled by editing a prompt.
+`DefaultV2` is not customized for municipal underwriting and must not be presented as if
+it encodes the firm conduct policies below.
 
 ## The conduct policies
 
@@ -80,9 +82,11 @@ The obligations that shape this design:
 | Rule 4511, recordkeeping | Every interaction traced to Application Insights: prompt, retrieval, tool call, response |
 | MSRB Rule G-42, advisor fiduciary duty | Out of scope by design; the agent supports underwriting workflows and is guarded against implying advisory standing |
 
-The human gate is structural. `DealDeskAnswer.requires_human_review` defaults to `True`
-and the compliance review sets `blocking` when any policy fails. A prompt change cannot
-remove either.
+The policies inspect both the user's request and the generated draft. A prohibited
+request is blocked before any draft event or approval checkpoint is exposed. For an
+allowed request, the human gate is structural: `DealDeskAnswer.requires_human_review`
+defaults to `True`, and the compliance review sets `blocking` when any policy fails. A
+prompt change cannot remove either behavior.
 
 ## What this does not prove
 

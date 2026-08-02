@@ -41,7 +41,7 @@ class RecordingAdapters:
 
     async def find_comparables(self, *, caller: Caller, **_filters):
         self.callers.append(caller)
-        return [self.deal], 2
+        return [self.deal], [], 2
 
 
 async def test_tools_dispatch_through_mediator_with_explicit_caller():

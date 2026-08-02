@@ -63,6 +63,27 @@ def _response_options(model: type[BaseModel]) -> PromptAgentDefinitionTextOption
     def close_objects(value: object) -> None:
         if isinstance(value, dict):
             value.pop("default", None)
+            if value.get("type") == "string" and "pattern" in value:
+                value.pop("pattern")
+                value["type"] = "number"
+                return
+            any_of = value.get("anyOf")
+            if isinstance(any_of, list):
+                numeric_options = [
+                    option
+                    for option in any_of
+                    if isinstance(option, dict) and option.get("type") == "number"
+                ]
+                has_patterned_string = any(
+                    isinstance(option, dict)
+                    and option.get("type") == "string"
+                    and "pattern" in option
+                    for option in any_of
+                )
+                if numeric_options and has_patterned_string:
+                    # Pydantic emits Decimal as a number or a regex-constrained string.
+                    # Foundry rejects that regex, so require the unambiguous JSON number.
+                    value["anyOf"] = numeric_options
             properties = value.get("properties")
             if isinstance(properties, dict):
                 value["additionalProperties"] = False

@@ -1,0 +1,11 @@
+-r requirements.txt
+azure-ai-contentunderstanding==1.0.1
+azure-ai-evaluation==1.16.2
+azure-search-documents==11.7.0b2
+fastapi==0.128.8
+openai==2.31.0
+pytest==9.0.2
+pytest-asyncio==1.3.0
+reportlab>=4.2.0
+ruff>=0.9.0
+uvicorn==0.40.0

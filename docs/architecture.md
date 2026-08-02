@@ -13,9 +13,12 @@ Provisioned by `azd up` into `westus3`, subscription `non-production Azure subsc
 | `text-embedding-3-large` | Knowledge base embeddings |
 | Azure AI Search (Standard) | Blob knowledge source, generated ingestion pipeline and knowledge base |
 | Storage account | Public synthetic PDFs; public network access disabled |
+| VNet, Blob private endpoint and private DNS | Private outbound path for evaluations and corpus upload |
+| Content Understanding analyzer | Portal-visible typed extraction of municipal document fields |
 | Foundry Hosted Agent | Builds and hosts the Agent Framework orchestrator from Python source |
 | Azure Container Apps and ACR | Hosts and packages only the streamable HTTP MCP server |
 | User-assigned managed identity | MCP telemetry publishing and ACR pull |
+| Corpus uploader identity | Uploads exactly the public corpus subset without storage keys |
 | Application Insights and Log Analytics | Traces, token usage and evaluation telemetry |
 
 Region note: the first deployment attempt targeted `eastus2` and failed with
@@ -57,6 +60,11 @@ The manifest repository applies caller group claims to private pricing records a
 reports an explicit withheld count. The custom MCP server does not query the knowledge
 base.
 
+Content Understanding is a parallel, portal-visible extraction artifact. Its
+`municipal_deal_extraction` analyzer was validated against all 14 manifest records, but
+the live answer path does not consume those extraction results: public narrative comes
+from Foundry IQ and typed candidate records come from the packaged manifest repository.
+
 ## Where numbers come from
 
 Debt service figures are computed arithmetically by `DebtServiceCalculator`, never by a
@@ -66,7 +74,8 @@ boundary is the reason the calculator lives behind a port and carries direct uni
 ## Thread and memory storage
 
 Thread state and agent memory are **Microsoft-managed** in this deployment, held within
-the project's regional boundary.
+the project's regional boundary. The solution does not implement bring-your-own memory,
+cross-session personalization or a Cosmos DB memory store.
 
 Foundry also supports bringing your own storage: with Standard Agent Setup, threads and
 memory are written to a Cosmos DB account in your own subscription, under your own keys
@@ -81,21 +90,24 @@ and belongs in a scoping conversation rather than in this environment.
 ## Identity, network and access
 
 Interactive demo surfaces use public endpoints with Microsoft Entra authentication.
-`disableLocalAuth` is set on the Foundry account, so no API keys exist. Storage has both
+`disableLocalAuth` is set on the Foundry account, so no API keys exist. The Foundry
+account is created with outbound VNet injection so managed evaluations can reach private
+Blob while the portal and hosted endpoint remain browser-accessible. Storage has both
 shared-key and public-network access disabled. Azure AI Search reaches Blob through an
-approved Search-managed shared private link. Corpus seeding uses a transient VNet/private
-endpoint uploader that is deleted after upload.
+approved Search-managed shared private link. Corpus seeding runs as a short-lived ACI in
+a persistent delegated uploader subnet and leaves an Azure-derived inventory receipt.
 
 Access is controlled by role assignment at the narrowest practical scope. No runtime
 identity holds `Owner` or `Contributor`.
 
 | Principal | Roles |
 | --- | --- |
-| Foundry project identity | Search Index Data Contributor, Search Service Contributor, Storage Blob Data Reader |
+| Foundry project identity | Foundry User, Search Index Data Contributor, Search Service Contributor, Storage Blob Data Owner |
+| Foundry account identity | Storage Blob Data Owner for evaluation Asset Store operations |
 | Search identity | Storage Blob Data Reader, Cognitive Services OpenAI User, Cognitive Services User |
 | MCP workload identity | Monitoring Metrics Publisher, AcrPull |
 | Hosted orchestrator identity | Platform-managed per-agent identity; project model and agent access |
-| Developer identity | Azure AI Developer, Cognitive Services User and OpenAI User, Search data and service contributor, Storage Blob Data Contributor |
+| Developer identity | Foundry User, Cognitive Services User and OpenAI User, Search data and service contributor, Storage Blob Data Contributor |
 
 This posture suits a demonstration presented from a laptop. It is not a production
 landing zone pattern and must not be presented as one. See
@@ -108,8 +120,12 @@ landing zone pattern and must not be presented as one. See
 - Azure AI Search data plane is reachable with Entra auth
 - Blob knowledge source processed 11 public PDFs with zero failures
 - Knowledge base returns 11 citations with extractive output
-- Research v2 calls both `find_comparable_deals` and `knowledge_base_retrieve`
+- Content Understanding extraction matches the manifest for all 14 generated PDFs
+- Research v1 calls both `find_comparable_deals` and `knowledge_base_retrieve`
 - MCP endpoint lists and calls its three typed tools over streamable HTTP
 - Hosted orchestrator v3 is active with Invocations 2.0.0 and a dedicated agent identity
+- Final mini and reasoning portal evaluations each passed 25/25 rows with zero errors
+- Deal-team and public-side runs return 14 and 11 sources respectively, with an explicit
+    three-record withheld disclosure for the public-side caller
 - `az bicep build --file infra/main.bicep` compiles with no errors
-- `azd provision` is idempotent across repeated runs
+- A complete `azd up --environment demo-vnet` succeeds end to end

@@ -92,10 +92,21 @@ def main() -> None:
         )
         print(f"uploaded {blob_name}", flush=True)
 
-    for blob in container.list_blobs(name_starts_with=PREFIX):
+    inventory: list[dict[str, object]] = []
+    for blob in container.list_blobs(name_starts_with=PREFIX, include=["metadata"]):
         if blob.name not in expected_names:
             container.delete_blob(blob.name)
             print(f"deleted stale {blob.name}", flush=True)
+            continue
+        metadata = blob.metadata or {}
+        inventory.append(
+            {
+                "blob_path": blob.name,
+                "document_id": metadata.get("document_id"),
+                "content_length": blob.size,
+                "source_sha256": metadata.get("source_sha256"),
+            }
+        )
 
     container.upload_blob(
         name="manifest.json",
@@ -104,6 +115,13 @@ def main() -> None:
         content_settings=ContentSettings(content_type="application/json"),
     )
     print(f"uploaded {len(expected_names)} public PDFs", flush=True)
+    receipt = {
+        "container": container.container_name,
+        "prefix": PREFIX,
+        "document_count": len(inventory),
+        "documents": sorted(inventory, key=lambda item: str(item["blob_path"])),
+    }
+    print(f"CORPUS_INVENTORY={json.dumps(receipt, separators=(',', ':'))}", flush=True)
 
 
 if __name__ == "__main__":

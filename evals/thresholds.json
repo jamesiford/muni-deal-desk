@@ -1,0 +1,12 @@
+{
+  "minimum_pass_rate": 0.96,
+  "category_minimum_pass_rates": {
+    "comparable_selection": 0.83,
+    "debt_service_figures": 1.0,
+    "citation_integrity": 1.0,
+    "gap_disclosure": 1.0,
+    "entitlement_contrasts": 1.0,
+    "guardrails": 1.0
+  },
+  "critical_cases_must_pass": true
+}

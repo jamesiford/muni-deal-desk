@@ -61,6 +61,10 @@ def test_specialists_use_models_tools_and_structured_contracts() -> None:
     assert research_schema["additionalProperties"] is False
     assert research_schema["required"] == list(research_schema["properties"])
     assert research_schema["$defs"]["Deal"]["additionalProperties"] is False
+    schema_text = str(research_schema)
+    assert "pattern" not in schema_text
+    par_amount_schema = research_schema["$defs"]["Deal"]["properties"]["par_amount"]
+    assert par_amount_schema == {"title": "Par Amount", "type": "number"}
 
     assert analyst.response_model is AnalystAssessment
     assert analyst.definition.model == "gpt-5.5"

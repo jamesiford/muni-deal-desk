@@ -3,12 +3,21 @@
 .SYNOPSIS
     Registers and smoke-tests the three Foundry prompt specialists.
 #>
+[CmdletBinding()]
+param(
+    [switch] $SkipSmoke
+)
+
 $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path -Parent $PSScriptRoot
 
 Push-Location $repoRoot
 try {
-    $output = python -m scripts.register_agents
+    $arguments = @('-m', 'scripts.register_agents')
+    if ($SkipSmoke) {
+        $arguments += '--skip-smoke'
+    }
+    $output = python @arguments
     if ($LASTEXITCODE -ne 0) {
         throw 'Prompt-agent registration or smoke validation failed.'
     }

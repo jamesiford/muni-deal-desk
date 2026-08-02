@@ -1,5 +1,8 @@
 targetScope = 'resourceGroup'
 
+@description('Foundry account system-assigned managed identity principal ID.')
+param accountPrincipalId string
+
 @description('Foundry project system-assigned managed identity principal ID.')
 param projectPrincipalId string
 
@@ -19,6 +22,9 @@ param developerPrincipalType string
 @description('Foundry account name, used to scope role assignments.')
 param accountName string
 
+@description('Foundry project name, used to scope developer data-plane access.')
+param projectName string
+
 @description('Azure AI Search service name, used to scope role assignments.')
 param searchServiceName string
 
@@ -34,15 +40,36 @@ var roles = {
   searchIndexDataContributor: '8ebe5a00-799e-43f5-93ac-243d3dce84a7'
   searchServiceContributor: '7ca78c08-252a-4471-8644-bb5ff32d4ba0'
   storageBlobDataContributor: 'ba92f5b4-2d11-453d-a403-e96b0029c9fe'
+  storageBlobDataOwner: 'b7e6dc6d-f1e8-4753-8033-0f276bb0955b'
   storageBlobDataReader: '2a2b9908-6ea1-4ae2-8e65-a410df84e7d1'
   cognitiveServicesUser: 'a97b65f3-24c7-4388-baec-2e87135dc908'
   cognitiveServicesOpenAIUser: '5e0bd9bd-7b93-4f28-af87-19fc36ad61bd'
-  azureAIDeveloper: '64702f94-c441-49e6-a78b-ef80e0188fee'
+  foundryUser: '53ca6127-db72-4b80-b1b0-d745d6d5456d'
   monitoringMetricsPublisher: '3913510d-42f4-4e42-8a64-420c390055eb'
 }
 
 resource account 'Microsoft.CognitiveServices/accounts@2025-04-01-preview' existing = {
   name: accountName
+}
+
+resource project 'Microsoft.CognitiveServices/accounts/projects@2025-04-01-preview' existing = {
+  parent: account
+  name: projectName
+}
+
+// Evaluation and hosted-agent workloads execute as the project identity and need the
+// current Foundry data-plane role on their parent account.
+resource projectFoundryUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  scope: account
+  name: guid(account.id, projectPrincipalId, roles.foundryUser)
+  properties: {
+    principalId: projectPrincipalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: subscriptionResourceId(
+      'Microsoft.Authorization/roleDefinitions',
+      roles.foundryUser
+    )
+  }
 }
 
 resource searchService 'Microsoft.Search/searchServices@2024-06-01-preview' existing = {
@@ -84,15 +111,32 @@ resource projectSearchServiceContributor 'Microsoft.Authorization/roleAssignment
   }
 }
 
-resource projectStorageReader 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+// Foundry evaluations stage datasets and result artifacts through the connected
+// storage account, so the project identity needs write access as well as read access.
+resource projectStorageOwner 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   scope: storageAccount
-  name: guid(storageAccount.id, projectPrincipalId, roles.storageBlobDataReader)
+  name: guid(storageAccount.id, projectPrincipalId, roles.storageBlobDataOwner)
   properties: {
     principalId: projectPrincipalId
     principalType: 'ServicePrincipal'
     roleDefinitionId: subscriptionResourceId(
       'Microsoft.Authorization/roleDefinitions',
-      roles.storageBlobDataReader
+      roles.storageBlobDataOwner
+    )
+  }
+}
+
+// The evaluation service resolves uploaded datasets through the account-level
+// Asset Store, which authenticates with the parent Foundry account identity.
+resource accountStorageOwner 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  scope: storageAccount
+  name: guid(storageAccount.id, accountPrincipalId, roles.storageBlobDataOwner)
+  properties: {
+    principalId: accountPrincipalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: subscriptionResourceId(
+      'Microsoft.Authorization/roleDefinitions',
+      roles.storageBlobDataOwner
     )
   }
 }
@@ -156,15 +200,15 @@ resource workloadTelemetryPublisher 'Microsoft.Authorization/roleAssignments@202
 // The developer identity runs the postup data-plane scripts: uploading the corpus,
 // creating the index and registering agents. Local authentication is disabled on the
 // Foundry account, so these data-plane roles are the only access path.
-resource developerAIDeveloper 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  scope: account
-  name: guid(account.id, developerPrincipalId, roles.azureAIDeveloper)
+resource developerFoundryUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  scope: project
+  name: guid(project.id, developerPrincipalId, roles.foundryUser)
   properties: {
     principalId: developerPrincipalId
     principalType: developerPrincipalType
     roleDefinitionId: subscriptionResourceId(
       'Microsoft.Authorization/roleDefinitions',
-      roles.azureAIDeveloper
+      roles.foundryUser
     )
   }
 }

@@ -9,6 +9,9 @@ param environmentName string
 @description('User-assigned managed identity name for container workloads.')
 param identityName string
 
+@description('Principal ID of the dedicated private corpus uploader identity.')
+param uploaderPrincipalId string
+
 @description('MCP server Container App name.')
 param mcpAppName string
 
@@ -88,6 +91,16 @@ resource acrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   name: guid(registry.id, workloadIdentity.id, acrPullRoleId)
   properties: {
     principalId: workloadIdentity.properties.principalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', acrPullRoleId)
+  }
+}
+
+resource uploaderAcrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  scope: registry
+  name: guid(registry.id, uploaderPrincipalId, acrPullRoleId)
+  properties: {
+    principalId: uploaderPrincipalId
     principalType: 'ServicePrincipal'
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', acrPullRoleId)
   }

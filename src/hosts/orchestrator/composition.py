@@ -7,9 +7,10 @@ import os
 from azure.identity import DefaultAzureCredential
 
 from src.application.handlers.compute_debt_service import ComputeDebtServiceHandler
+from src.application.handlers.find_comparables import FindComparablesHandler
 from src.application.handlers.review_for_compliance import ReviewForComplianceHandler
 from src.application.mediator import Mediator
-from src.application.messages import ComputeDebtService, ReviewForCompliance
+from src.application.messages import ComputeDebtService, FindComparables, ReviewForCompliance
 from src.hosts.orchestrator.server import ApprovalInvocationsHostServer, HostedWorkflowAgent
 from src.hosts.orchestrator.settings import OrchestratorSettings
 from src.hosts.orchestrator.workflow import WorkflowDependencies, create_deal_desk_workflow
@@ -38,29 +39,33 @@ def create_runtime_server() -> tuple[ApprovalInvocationsHostServer, int]:
         ComputeDebtService,
         ComputeDebtServiceHandler(repository, DebtServiceCalculator()),
     )
+    mediator.register(FindComparables, FindComparablesHandler(repository))
     mediator.register(ReviewForCompliance, ReviewForComplianceHandler())
 
-    workflow = create_deal_desk_workflow(
-        WorkflowDependencies(
-            mediator=mediator,
-            specialists=RegisteredSpecialistInvoker(
-                settings.project_endpoint,
-                credential,
-                {
-                    "municipal-deal-research": settings.research_agent_version,
-                    "municipal-deal-analyst": settings.analyst_agent_version,
-                    "municipal-deal-compliance": settings.compliance_agent_version,
-                },
-            ),
-            models=FoundryModelInvoker(settings.project_endpoint, credential),
-            router_model=settings.router_model,
-            synthesis_model=settings.synthesis_model,
-        )
-    )
-    functional_agent = workflow.as_agent(
-        name="municipal-deal-desk",
-        description=(
-            "Cited municipal new-issue comparison with deterministic controls and approval."
+    dependencies = WorkflowDependencies(
+        mediator=mediator,
+        specialists=RegisteredSpecialistInvoker(
+            settings.project_endpoint,
+            credential,
+            {
+                "municipal-deal-research": settings.research_agent_version,
+                "municipal-deal-analyst": settings.analyst_agent_version,
+                "municipal-deal-compliance": settings.compliance_agent_version,
+            },
         ),
+        models=FoundryModelInvoker(settings.project_endpoint, credential),
+        router_model=settings.router_model,
+        synthesis_model=settings.synthesis_model,
     )
-    return ApprovalInvocationsHostServer(HostedWorkflowAgent(functional_agent)), settings.port
+
+    def create_agent() -> HostedWorkflowAgent:
+        workflow = create_deal_desk_workflow(dependencies)
+        functional_agent = workflow.as_agent(
+            name="municipal-deal-desk",
+            description=(
+                "Cited municipal new-issue comparison with deterministic controls and approval."
+            ),
+        )
+        return HostedWorkflowAgent(functional_agent)
+
+    return ApprovalInvocationsHostServer(create_agent), settings.port

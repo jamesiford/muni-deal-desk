@@ -78,6 +78,6 @@ def get_settings() -> Settings:
     except Exception as exc:
         raise RuntimeError(
             "Environment configuration is incomplete. Run `azd provision` first, or "
-            "`azd env select demo` if you have more than one environment.\n"
+            "`azd env select demo-vnet` if you have more than one environment.\n"
             f"Underlying error: {exc}"
         ) from exc

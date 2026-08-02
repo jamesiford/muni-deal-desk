@@ -3,10 +3,13 @@
 .github
 .pytest_cache
 .ruff_cache
+.venv
 __pycache__
 corpus
 docs
 evals
+frontend/node_modules
+frontend/dist
 infra
 scripts
 tests
