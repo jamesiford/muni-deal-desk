@@ -162,14 +162,45 @@ def test_structured_citation_is_rendered_inside_each_sentence() -> None:
 
 async def test_workflow_pauses_and_returns_typed_answer_only_after_approval() -> None:
     deal_desk, specialists, models = _workflow("Comparable par is $85.0 million.")
+    queue = asyncio.Queue()
 
-    first = await deal_desk.run(_request())
+    async with report_progress(queue):
+        first = await deal_desk.run(_request())
 
     requests = first.get_request_info_events()
     assert len(requests) == 1
     assert requests[0].request_id == APPROVAL_REQUEST_ID
     assert isinstance(requests[0].data, HumanApprovalRequest)
     assert requests[0].data.draft.requires_human_review is True
+    status_events = []
+    while not queue.empty():
+        event = queue.get_nowait()
+        if event.event == "status":
+            status_events.append(event.payload)
+    status_messages = [event["message"] for event in status_events]
+    assert "Orchestrator is asking the model router" in status_messages[0]
+    expected_status_terms = (
+        "fanning out",
+        "entitlement-aware deal repository",
+        "delegating the evidence work to the Research agent",
+        "Deal Desk MCP",
+        "Foundry IQ knowledge base",
+        "deterministic debt-service calculator",
+        "Analyst agent",
+        "synthesis model",
+        "Compliance agent",
+        "Deterministic policy tools",
+    )
+    assert all(
+        any(term in message for message in status_messages) for term in expected_status_terms
+    )
+    branch_stages = {event.get("stage") for event in status_events}
+    assert "research-public-comparables" in branch_stages
+    assert "compute-subject-debt-service" in branch_stages
+    assert status_messages[-1] == (
+        "Multi-agent workflow is complete; orchestrator is checkpointing and waiting "
+        "for supervising-principal review."
+    )
     calls_before_resume = specialists.calls, models.calls
 
     resumed = await deal_desk.run(

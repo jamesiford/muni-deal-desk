@@ -31,9 +31,15 @@ a model switch, a compliance check and a human gate.
 | Guardrails | Complete | Model review plus deterministic blocking and typed human approval |
 | Agents | Complete | Three prompt specialists and native Foundry Hosted orchestrator v3 |
 | Evaluations | Complete | 25-case local/portal gate and two-model comparison |
-| Tracing and observability | Complete for demo | Workflow spans, stage streaming and portal evaluation runs |
+| Tracing and observability | Complete for demo | Workflow spans, branch-aware SSE status streaming and portal evaluation runs |
 | BYO memory / Cosmos DB | Not implemented | Platform-managed state only; documented production option |
 | Fine-tuning | Not used | Evaluation-first baseline retained for a future candidate |
+
+The current promotion candidate adds active spinners, fine-grained multi-agent/tool/
+knowledge status messages, parallel-branch status arbitration, and GitHub-Flavored
+Markdown table rendering. It passed the complete local test/build gate and is approved
+for promotion; hosted orchestrator v3 remains the active Azure version until deployment
+validation and promotion complete.
 
 ## Demo narrative
 

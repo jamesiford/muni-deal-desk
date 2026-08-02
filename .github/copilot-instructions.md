@@ -26,6 +26,9 @@ resource group were removed.
   with zero failed and zero errored rows.
 - Front door: React/Vite output served by local FastAPI. It is not an Azure service.
   `azure.yaml` deploys only MCP and the hosted orchestrator.
+- Approved promotion candidate: branch-aware granular SSE statuses, active spinners and
+  GFM table rendering pass all local checks. Hosted v3 remains active until Azure
+  deployment validation and promotion complete.
 - Next roadmap phase: Phase 9, Copilot Studio/Teams. Phase 11 fallback recording is
   pending and may proceed in parallel.
 

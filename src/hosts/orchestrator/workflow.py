@@ -137,7 +137,15 @@ def create_deal_desk_workflow(
     @step(name="plan-request")
     async def plan_request(request: DealDeskRequest) -> WorkflowPlan:
         with tracer.start_as_current_span("orchestrator.plan"):
-            return await run_stage(
+            await emit_progress(
+                "status",
+                stage="plan-request",
+                message=(
+                    "Orchestrator is asking the model router to decompose the request into "
+                    "research and structural-analysis tasks."
+                ),
+            )
+            plan = await run_stage(
                 "plan-request",
                 dependencies.models.invoke(
                     dependencies.router_model,
@@ -149,6 +157,12 @@ def create_deal_desk_workflow(
                     WorkflowPlan,
                 ),
             )
+            await emit_progress(
+                "status",
+                stage="plan-request",
+                message="Model router returned the plan; orchestrator is starting parallel work.",
+            )
+            return plan
 
     @step(name="research-public-comparables")
     async def research_public(
@@ -164,6 +178,14 @@ def create_deal_desk_workflow(
         request: DealDeskRequest,
         plan: WorkflowPlan,
     ) -> ResearchFindings:
+        await emit_progress(
+            "status",
+            stage="research-public-comparables",
+            message=(
+                "Orchestrator is querying the entitlement-aware deal repository for typed "
+                "comparable candidates and private-record visibility."
+            ),
+        )
         candidates = await dependencies.mediator.send(
             FindComparables(
                 caller=_caller(request),
@@ -174,6 +196,27 @@ def create_deal_desk_workflow(
                 par_tolerance_pct=Decimal("100"),
                 limit=20,
             )
+        )
+        await emit_progress(
+            "status",
+            stage="research-public-comparables",
+            message=(
+                f"Deal repository returned {len(candidates.comparables)} candidates and "
+                f"withheld {candidates.excluded_by_permission} private record(s)."
+            ),
+        )
+        await emit_progress(
+            "status",
+            stage="research-public-comparables",
+            message="Orchestrator is delegating the evidence work to the Research agent.",
+        )
+        await emit_progress(
+            "status",
+            stage="research-public-comparables",
+            message=(
+                "Research agent is using the Deal Desk MCP for typed candidates and "
+                "interrogating the Foundry IQ knowledge base for cited public disclosures."
+            ),
         )
         prompt = (
             f"{plan.research_focus}\nRetrieve cited public evidence for these deterministic "
@@ -187,6 +230,14 @@ def create_deal_desk_workflow(
                 ResearchFindings,
                 caller=_caller(request),
             )
+        await emit_progress(
+            "status",
+            stage="research-public-comparables",
+            message=(
+                f"Research agent returned {len(findings.citations)} citation(s) and "
+                f"{len(findings.gaps)} evidence gap(s) to the orchestrator."
+            ),
+        )
         merged = findings.model_copy(
             update={
                 "comparables": candidates.comparables,
@@ -199,12 +250,28 @@ def create_deal_desk_workflow(
             await emit_progress("evidence", evidence_source=source.model_dump(mode="json"))
         for citation in merged.citations:
             await emit_progress("citation", citation=citation.model_dump(mode="json"))
+        await emit_progress(
+            "status",
+            stage="research-public-comparables",
+            message=(
+                "Orchestrator merged public Foundry IQ evidence with entitled typed records "
+                "without placing private memos in the knowledge base."
+            ),
+        )
         return merged
 
     @step(name="compute-subject-debt-service")
     async def compute_subject(request: DealDeskRequest) -> DebtServiceSchedule:
         with tracer.start_as_current_span("tool.compute_debt_service"):
-            return await run_stage(
+            await emit_progress(
+                "status",
+                stage="compute-subject-debt-service",
+                message=(
+                    "Orchestrator is invoking the deterministic debt-service calculator for "
+                    f"{request.subject_deal_id}."
+                ),
+            )
+            schedule = await run_stage(
                 "compute-subject-debt-service",
                 dependencies.mediator.send(
                     ComputeDebtService(
@@ -213,6 +280,15 @@ def create_deal_desk_workflow(
                     )
                 ),
             )
+            await emit_progress(
+                "status",
+                stage="compute-subject-debt-service",
+                message=(
+                    "Debt-service tool returned the principal and interest schedule; "
+                    "orchestrator is retaining it as calculated evidence."
+                ),
+            )
+            return schedule
 
     @step(name="assess-comparables")
     async def assess_comparables(
@@ -220,13 +296,29 @@ def create_deal_desk_workflow(
         plan: WorkflowPlan,
         research: ResearchFindings,
     ) -> AnalystAssessment:
+        await emit_progress(
+            "status",
+            stage="assess-comparables",
+            message=(
+                "Orchestrator is handing the Research findings and calculated debt service "
+                "to the Analyst agent."
+            ),
+        )
+        await emit_progress(
+            "status",
+            stage="assess-comparables",
+            message=(
+                "Analyst agent is using Deal Desk MCP tools to inspect deal terms and compare "
+                "structures, calls, and debt-service patterns."
+            ),
+        )
         prompt = (
             f"{plan.analysis_focus}\nAssess only the public comparable issues in this "
             f"research handoff: {research.model_dump_json()}. Do not request or infer any "
             "private proposed-deal facts."
         )
         with tracer.start_as_current_span("specialist.analyst"):
-            return await run_stage(
+            assessment = await run_stage(
                 "assess-comparables",
                 dependencies.specialists.invoke(
                     ANALYST_AGENT,
@@ -235,6 +327,15 @@ def create_deal_desk_workflow(
                     caller=_caller(request),
                 ),
             )
+        await emit_progress(
+            "status",
+            stage="assess-comparables",
+            message=(
+                f"Analyst agent returned {len(assessment.assessments)} structural "
+                "assessment(s) to the orchestrator."
+            ),
+        )
+        return assessment
 
     @step(name="synthesize-draft")
     async def synthesize(
@@ -244,6 +345,14 @@ def create_deal_desk_workflow(
         analysis: AnalystAssessment,
         schedule: DebtServiceSchedule,
     ) -> DraftPackage:
+        await emit_progress(
+            "status",
+            stage="synthesize-draft",
+            message=(
+                "Orchestrator has joined the Research, Analyst, and calculator handoffs and "
+                "is invoking the synthesis model."
+            ),
+        )
         prompt = (
             f"Request: {request.model_dump_json()}\nPlan: {plan.model_dump_json()}\n"
             f"Research: {research.model_dump_json()}\n"
@@ -266,7 +375,15 @@ def create_deal_desk_workflow(
                     DraftPackage,
                 ),
             )
-            return draft
+        await emit_progress(
+            "status",
+            stage="synthesize-draft",
+            message=(
+                f"Synthesis model returned {len(draft.sections)} draft section(s); "
+                "orchestrator is forwarding them to control review."
+            ),
+        )
+        return draft
 
     @step(name="review-draft")
     async def review_draft(
@@ -285,6 +402,14 @@ def create_deal_desk_workflow(
         schedule: DebtServiceSchedule,
     ) -> ComplianceReview:
         text = _draft_text(draft, schedule)
+        await emit_progress(
+            "status",
+            stage="review-draft",
+            message=(
+                "Orchestrator is delegating the cited draft to the Compliance agent for "
+                "model-based review."
+            ),
+        )
         with tracer.start_as_current_span("specialist.compliance"):
             model_review = await dependencies.specialists.invoke(
                 COMPLIANCE_AGENT,
@@ -292,6 +417,22 @@ def create_deal_desk_workflow(
                 ComplianceReview,
                 caller=_caller(request),
             )
+        await emit_progress(
+            "status",
+            stage="review-draft",
+            message=(
+                f"Compliance agent returned {len(model_review.findings)} finding(s); "
+                "orchestrator is starting the independent deterministic review."
+            ),
+        )
+        await emit_progress(
+            "status",
+            stage="review-draft",
+            message=(
+                "Deterministic policy tools are checking the original request and draft for "
+                "fiduciary language, recommendations, and uncited figures."
+            ),
+        )
         with tracer.start_as_current_span("guardrail.deterministic"):
             draft_review = await dependencies.mediator.send(
                 ReviewForCompliance(caller=_caller(request), text=text)
@@ -312,6 +453,14 @@ def create_deal_desk_workflow(
         review = _merge_reviews(model_review, deterministic)
         for finding in review.findings:
             await emit_progress("policy", finding=finding.model_dump(mode="json"))
+        await emit_progress(
+            "status",
+            stage="review-draft",
+            message=(
+                "Orchestrator merged model and deterministic control findings; "
+                f"blocking is {str(review.blocking).lower()}."
+            ),
+        )
         return review
 
     @workflow(
@@ -321,6 +470,13 @@ def create_deal_desk_workflow(
     )
     async def deal_desk(request: DealDeskRequest, ctx: RunContext) -> DealDeskAnswer:
         plan = await plan_request(request)
+        await emit_progress(
+            "status",
+            message=(
+                "Orchestrator is fanning out Research-agent retrieval and deterministic "
+                "debt-service calculation in parallel."
+            ),
+        )
         research, schedule = await asyncio.gather(
             research_public(request, plan),
             compute_subject(request),
@@ -350,6 +506,13 @@ def create_deal_desk_workflow(
             partial_due_to_permissions=research.excluded_by_permission > 0,
             requires_human_review=True,
         )
+        await emit_progress(
+            "status",
+            message=(
+                "Multi-agent workflow is complete; orchestrator is checkpointing and waiting "
+                "for supervising-principal review."
+            ),
+        )
         with tracer.start_as_current_span("approval.request"):
             raw_decision = await ctx.request_info(
                 HumanApprovalRequest(draft=answer),
@@ -357,6 +520,10 @@ def create_deal_desk_workflow(
                 request_id=APPROVAL_REQUEST_ID,
             )
         decision = HumanApprovalDecision.model_validate(raw_decision)
+        await emit_progress(
+            "status",
+            message="Orchestrator resumed from checkpoint and is applying the reviewer decision.",
+        )
         if not decision.approved:
             return _withheld_answer(
                 "Draft rejected by the supervising principal and withheld from the caller.",

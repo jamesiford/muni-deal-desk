@@ -42,11 +42,19 @@ the UI:
 | Event | Payload |
 | --- | --- |
 | `stage` | Named workflow stage, for the progress display |
+| `status` | Operational message plus optional owning `stage` for handoffs and boundaries |
 | `token` | Incremental text for the draft |
 | `citation` | A source reference as it is resolved |
 | `policy` | A conduct policy finding |
 | `final` | The complete `DealDeskAnswer` |
 | `error` | A message safe to display |
+
+`status` messages describe observable work such as candidate selection, specialist
+handoffs, deterministic calculation, synthesis, control review and approval wait. They
+do not expose model chain-of-thought or hidden reasoning tokens. Stage-owned messages
+are displayed only while that branch is active. When Research and calculation run in
+parallel, completion of the faster calculator branch therefore cannot overwrite the
+still-active Research status.
 
 Cost: roughly five to six hours, and a container to deploy. Accepted because part one of
 the walkthrough has no substitute, and because a visibly working application is what makes

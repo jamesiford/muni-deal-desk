@@ -21,6 +21,7 @@ class RecordingClient:
 
     async def start(self, session_id: str, request: DealDeskRequest) -> AsyncIterator[str]:
         self.started.append((session_id, request))
+        yield 'event: status\ndata: {"event":"status","message":"Planning."}\n\n'
         yield 'event: stage\ndata: {"event":"stage"}\n\n'
 
     async def approve(
@@ -71,6 +72,8 @@ def test_front_door_proxies_start_and_approval_sse() -> None:
     assert started.headers["x-run-id"] == "run-001"
     assert started.headers["cache-control"] == "no-cache, no-transform"
     assert started.headers["x-accel-buffering"] == "no"
+    assert "event: status" in started.text
+    assert '"message":"Planning."' in started.text
     assert "event: stage" in started.text
     assert hosted.started[0][1].caller_user_id == "demo-public-side"
     assert approved.status_code == 200

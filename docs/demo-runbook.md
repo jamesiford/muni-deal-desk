@@ -195,6 +195,9 @@ Blob or Foundry IQ.
 Start as **Deal-team member** and run the loaded prompt. While it streams, point to:
 
 - six named workflow stages rather than a generic spinner
+- active stage and Run-button spinners throughout the long-running workflow
+- one branch-aware status line naming orchestrator handoffs, specialists, MCP tools,
+  Foundry IQ public-document retrieval, calculation, synthesis and controls
 - 14 evidence sources, including the three `PM-*` private records
 - citations arriving before the final answer
 - computed debt service and structural comparisons
@@ -202,7 +205,8 @@ Start as **Deal-team member** and run the loaded prompt. While it streams, point
 - the supervising-principal approval gate
 
 Say: *"The user sees progress because this is a multi-minute workflow, not one model
-completion. Research, calculations, analysis, drafting and controls are separate steps."*
+completion. Research and calculation fan out in parallel, and the status line follows
+whichever branches remain active before the workflow joins for analysis and drafting."*
 
 Approve the clean draft. The final state should read **Approved**.
 

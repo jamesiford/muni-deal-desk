@@ -346,6 +346,14 @@ records; the deal-team persona returned 14. A fiduciary/investor-recommendation 
 returned a blocked final with no approval bar. Light/dark themes, customer branding and
 the 40px prompt action pass desktop browser checks without horizontal overflow.
 
+**Approved promotion candidate (1 August 2026):** the local front door now renders
+GitHub-Flavored Markdown tables, spins the Run control and each active workflow stage,
+and shows fine-grained orchestration, specialist, MCP, Foundry IQ, calculator, synthesis,
+control and approval statuses. Statuses carry their owning stage, so completion of the
+parallel calculator branch cannot overwrite a still-active Research status. The exact
+race was reproduced and passed in browser automation at desktop and mobile widths; all
+95 tests, Ruff and the production frontend build pass. Azure promotion is the next step.
+
 ## Phase 9 — Copilot Studio surface
 
 **Status:** next

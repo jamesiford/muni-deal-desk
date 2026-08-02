@@ -75,6 +75,10 @@ def test_invocations_host_streams_real_stage_approval_and_final_events(monkeypat
     def create_agent() -> HostedWorkflowAgent:
         @workflow(name="streaming-approval-integration")
         async def approval_flow(request: DealDeskRequest, ctx: RunContext) -> str:
+            await emit_progress(
+                "status",
+                message="Planner is decomposing the request.",
+            )
             summary = await run_stage("plan-request", echo(request.question))
             await emit_progress(
                 "citation",
@@ -133,6 +137,8 @@ def test_invocations_host_streams_real_stage_approval_and_final_events(monkeypat
     assert paused.headers["cache-control"] == "no-cache, no-transform"
     assert paused.headers["x-accel-buffering"] == "no"
     assert paused_body.startswith(": ")
+    assert "event: status" in paused_body
+    assert '"message":"Planner is decomposing the request."' in paused_body
     assert "event: stage" in paused_body
     assert '"stage":"plan-request","status":"started"' in paused_body
     assert '"stage":"plan-request","status":"completed"' in paused_body

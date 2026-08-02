@@ -6,6 +6,7 @@ import {
   CircleDashed,
   FileText,
   LockKeyhole,
+  LoaderCircle,
   Moon,
   Play,
   ShieldCheck,
@@ -14,6 +15,8 @@ import {
   UsersRound,
   X,
 } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import customerColorLogo from "../logos/customerholdings-color-logo.png";
 import customerWhiteLogo from "../logos/customerholdings-white-logo.png";
 import { startRun, submitApproval } from "./api/stream.js";
@@ -32,6 +35,23 @@ const STAGES = [
   ["synthesize-draft", "Draft market summary"],
   ["review-draft", "Apply compliance controls"],
 ];
+
+const STAGE_STATUS = {
+  "plan-request": "Orchestrator is asking the model router to plan specialist work.",
+  "research-public-comparables": "Orchestrator is delegating cited retrieval to Research.",
+  "compute-subject-debt-service": "Orchestrator is invoking the deterministic calculator.",
+  "assess-comparables": "Orchestrator is handing Research evidence to the Analyst agent.",
+  "synthesize-draft": "Orchestrator is joining specialist handoffs for synthesis.",
+  "review-draft": "Orchestrator is delegating review to Compliance and policy tools.",
+};
+
+function Markdown({ children }) {
+  return (
+    <div className="markdown">
+      <ReactMarkdown remarkPlugins={[remarkGfm]}>{children}</ReactMarkdown>
+    </div>
+  );
+}
 
 function IdentitySwitcher({ value, disabled, onChange }) {
   return (
@@ -78,7 +98,13 @@ function StageTimeline({ stages, running }) {
           return (
             <li key={key} data-status={status}>
               <span className="stage-icon">
-                {status === "completed" ? <Check size={14} /> : <CircleDashed size={14} />}
+                {status === "completed" ? (
+                  <Check size={14} />
+                ) : status === "started" ? (
+                  <LoaderCircle className="spinner" size={15} />
+                ) : (
+                  <CircleDashed size={14} />
+                )}
               </span>
               <span>{label}</span>
             </li>
@@ -165,11 +191,11 @@ function DraftView({ answer, outcome }) {
           {blocked ? "Blocked" : approved ? "Approved" : "Review required"}
         </span>
       </div>
-      <p className="summary">{answer.summary}</p>
+      <div className="summary"><Markdown>{answer.summary}</Markdown></div>
       {answer.sections.map((section) => (
         <article key={section.heading}>
           <h3>{section.heading}</h3>
-          <p>{section.body}</p>
+          <Markdown>{section.body}</Markdown>
           <div className="citation-row">
             {section.citations.map((citation) => (
               <span title={citation.excerpt} key={`${section.heading}-${citation.document_id}`}>
@@ -203,10 +229,29 @@ export default function App() {
   const [approval, setApproval] = useState(null);
   const [runId, setRunId] = useState(null);
   const [running, setRunning] = useState(false);
+  const [liveStatus, setLiveStatus] = useState("");
+  const [stageStatuses, setStageStatuses] = useState({});
   const [error, setError] = useState(null);
 
   function handleEvent(name, payload) {
-    if (name === "stage") setStages((current) => ({ ...current, [payload.stage]: payload.status }));
+    if (name === "stage") {
+      setStages((current) => ({ ...current, [payload.stage]: payload.status }));
+      if (payload.status === "started") {
+        setStageStatuses((current) => ({
+          ...current,
+          [payload.stage]: current[payload.stage]
+            || STAGE_STATUS[payload.stage]
+            || "Continuing workflow analysis.",
+        }));
+      }
+    }
+    if (name === "status") {
+      if (payload.stage) {
+        setStageStatuses((current) => ({ ...current, [payload.stage]: payload.message }));
+      } else {
+        setLiveStatus(payload.message);
+      }
+    }
     if (name === "citation") {
       setCitations((current) => current.some((item) => item.document_id === payload.citation.document_id) ? current : [...current, payload.citation]);
     }
@@ -231,18 +276,24 @@ export default function App() {
     if (name === "approval_required") {
       setApproval(payload);
       setAnswer(payload.request.draft);
+      setLiveStatus("Analysis complete. Waiting for supervising-principal review.");
     }
     if (name === "final") {
       setOutcome(payload.outcome);
       setAnswer(payload.answer);
       setApproval(null);
+      setLiveStatus(payload.outcome === "approved" ? "Review approved." : "Workflow complete.");
     }
-    if (name === "error") setError(payload.message);
+    if (name === "error") {
+      setError(payload.message);
+      setLiveStatus("Workflow stopped before completion.");
+    }
   }
 
   async function submit() {
     setStages({}); setCitations([]); setEvidenceSources([]); setPolicies([]); setAnswer(null);
-    setOutcome(null); setApproval(null); setError(null); setRunning(true);
+    setOutcome(null); setApproval(null); setError(null); setStageStatuses({});
+    setLiveStatus("Starting workflow."); setRunning(true);
     try {
       const id = await startRun({ question, identity }, handleEvent);
       setRunId(id);
@@ -254,7 +305,7 @@ export default function App() {
   }
 
   async function decide(approved) {
-    setRunning(true); setError(null);
+    setRunning(true); setError(null); setLiveStatus("Submitting supervising-principal decision.");
     try {
       await submitApproval(runId, { approved, reviewer_notes: approved ? "Reviewed in front door." : "Rejected in front door." }, handleEvent);
     } catch (requestError) {
@@ -269,6 +320,14 @@ export default function App() {
     document.documentElement.setAttribute("data-theme", nextTheme);
     setTheme(nextTheme);
   }
+
+  const activeStatuses = STAGES
+    .filter(([stage]) => stages[stage] === "started")
+    .map(([stage]) => stageStatuses[stage] || STAGE_STATUS[stage])
+    .filter(Boolean);
+  const displayedStatus = activeStatuses.length > 1
+    ? `Parallel work: ${activeStatuses.join(" • ")}`
+    : activeStatuses[0] || liveStatus;
 
   return (
     <div className="app-shell">
@@ -292,8 +351,13 @@ export default function App() {
           <section className="query-band">
             <textarea value={question} onChange={(event) => setQuestion(event.target.value)} disabled={running || Boolean(approval)} aria-label="Deal Desk question" />
             <div className="query-actions">
+              <div className="workflow-status" aria-live="polite" aria-atomic="true">
+                {running && <LoaderCircle className="spinner" size={16} />}
+                <span>{displayedStatus}</span>
+              </div>
               <button className="run-button" onClick={submit} disabled={running || Boolean(approval) || question.trim().length < 10} title="Run analysis">
-                <Play size={17} /> {running ? "Running" : "Run analysis"}
+                {running ? <LoaderCircle className="spinner" size={17} /> : <Play size={17} />}
+                {running ? "Running" : "Run analysis"}
               </button>
             </div>
           </section>
