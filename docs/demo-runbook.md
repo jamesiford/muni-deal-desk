@@ -52,6 +52,19 @@ experience. Spend most of the session in Foundry **Build**.
 - [ ] Keep the fallback recording open but out of sight
 - [ ] Confirm the app starts in the **Deal-team member** persona
 
+For direct Foundry publication to Teams and Microsoft 365, use:
+
+| Field | Value |
+| --- | --- |
+| Publish version | `1.0.0` |
+| Developer | `Zava Securities Demo Team` |
+| Developer website | `https://github.com/jamesiford/muni-deal-desk` |
+| Terms of use | `https://github.com/jamesiford/muni-deal-desk/blob/main/docs/terms-of-use.md` |
+| Privacy statement | `https://github.com/jamesiford/muni-deal-desk/blob/main/docs/privacy.md` |
+
+The legal pages explicitly identify Zava, the issuers, documents and pricing records as
+fictional and prohibit entering real confidential or material nonpublic information.
+
 Launch the local front door from a fresh PowerShell session:
 
 ```powershell

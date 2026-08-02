@@ -61,6 +61,8 @@ Supporting detail:
 - [Guardrail scope and regulatory framing](docs/guardrails.md)
 - [Hybrid evaluation networking](docs/hybrid-evaluation-networking-plan.md)
 - [Build and validation history](docs/roadmap.md)
+- [Terms of Use](docs/terms-of-use.md)
+- [Privacy Statement](docs/privacy.md)
 
 ## Architecture
 
