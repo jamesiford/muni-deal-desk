@@ -14,14 +14,14 @@ validated.
 | 1-6 | Complete | Infrastructure, corpus, IQ, MCP, prompt agents and hosted workflow |
 | 7 and 7A | Complete | Private-storage evaluation path and final 25-case two-model runs |
 | 8 | Complete | Local fictional Zava Securities React/FastAPI presentation front door |
-| 9 | **Next** | Publish the orchestrator through Copilot Studio into Teams |
+| 9 | **Blocked** | Direct connector discovered; tenant DLP/admin dependency prevents connection creation |
 | 10 | Complete | Presenter runbook and end-to-end rehearsal |
 | 11 | Pending | Record and store the fallback walkthrough |
 
-The core Foundry demonstration is complete and can run end to end now. Phase 9 is the
-next implementation phase because the account-team material promises a Copilot Studio
-surface. Phase 11 is the remaining session-readiness task and can proceed in parallel
-because its Phase 10 dependency is already complete.
+The core Foundry demonstration is complete and can run end to end now. Phase 9 reached
+the supported Copilot Studio connector but is blocked by tenant governance outside this
+repository. Phase 11 is the next actionable session-readiness task because its Phase 10
+dependency is already complete.
 
 The frontend is not an Azure service in this topology. `azd up` deploys MCP to Container
 Apps and the orchestrator to Foundry Hosted Agents; the presenter builds React and runs
@@ -367,17 +367,41 @@ approved three-section answer. Superseded v3 was removed after validation.
 
 ## Phase 9 — Copilot Studio surface
 
-**Status:** next
+**Status:** blocked by Power Platform DLP and environment administration
 **Depends on:** 6
-**First candidate for cutting**
+**External owner:** Power Platform administrator
 
 Publish the orchestrator and call it from Copilot Studio into Teams. Requested
 specifically by the account team, and slide 14 of the deck promises it.
 
 **Exit criteria**
 
-- Agent reachable from Copilot Studio
-- A question asked in Teams returns a cited answer
+- [ ] Agent reachable from Copilot Studio
+- [ ] Approval checkpoint and citations survive the connected-agent handoff
+- [ ] A question asked in Teams returns a cited answer
+
+**Attempted validation (1 August 2026):** a Zava Municipal Deal Desk wrapper was created
+in Copilot Studio environment `745d0669-8702-e0c2-a33d-b5f249478a0e`. The Azure AI
+Foundry Agent Service connector was available, Microsoft Entra ID User Login was
+selected, and the validated Foundry project endpoint was entered. Connection creation
+was blocked at design time by DLP policy `Personal Developer - (default)`. The maker
+cannot change that policy or create an alternate sandbox environment.
+
+This is an external governance dependency, not a Foundry endpoint failure. No connection
+was created, no Copilot Studio invocation reached orchestrator v4, and nothing was
+published to Teams. A2A, MCP, HTTP or custom-connector workarounds are intentionally not
+used because they remain policy-governed and would not prove the requested direct
+Foundry connected-agent path.
+
+**Resume criteria:** an administrator must provide a dedicated sandbox or scoped policy
+that permits Azure AI Foundry Agent Service and the Teams/Microsoft 365 channel in
+compatible data groups. After propagation, repeat connection, approval/citation testing,
+personal Teams installation and only then broader sharing.
+
+**Separate path discovered:** Foundry exposes a direct **Publish to Teams and Microsoft
+365** wizard. The subscription's `Microsoft.BotService` provider was registered during
+the proof, but no Azure Bot resource or Teams application was created, and this path is
+not counted toward Phase 9 completion.
 
 ## Phase 10 — Runbook and rehearsal
 
@@ -416,8 +440,8 @@ this. A live Foundry demo on a Monday morning without a fallback is an avoidable
 
 ## What to cut, in order
 
-1. **Copilot Studio surface (Phase 9).** Costs a slide promise. Mitigate by showing the
-   published agent endpoint instead.
+1. **Copilot Studio surface (Phase 9).** Blocked by tenant DLP. Mitigate by showing the
+   policy enforcement as a two-minute governance coda, then return to hosted v4.
 2. **The optional A2A aside.** Never on the critical path.
 3. **Two-model evaluation comparison.** Keep single-model evals; assert the tradeoff
    from the model catalogue instead of measuring it.

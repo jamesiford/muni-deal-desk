@@ -52,7 +52,10 @@ experience. Spend most of the session in Foundry **Build**.
 - [ ] Keep the fallback recording open but out of sight
 - [ ] Confirm the app starts in the **Deal-team member** persona
 
-For direct Foundry publication to Teams and Microsoft 365, use:
+The values below are prepared for a future direct Foundry publication attempt. Do not
+use this as part of the core walkthrough or imply publication completed. The repository
+must be publicly reachable, or these URLs must move to another public host, before they
+can be used in a Teams application listing.
 
 | Field | Value |
 | --- | --- |
@@ -665,6 +668,55 @@ Application Insights and Log Analytics receive OpenTelemetry data. Tracing suppo
 debugging and governance evidence; it is not by itself a complete books-and-records
 program. Retention, redaction, access and supervision remain production decisions.
 
+## Optional coda - Copilot Studio governance
+
+**Timebox:** two minutes. Show this only after the complete working application and
+Foundry walkthrough. It is a governance proof, not a fourth working application.
+
+Open the draft **Zava Municipal Deal Desk** agent in Copilot Studio. Navigate to the
+Azure AI Foundry Agent Service connection dialog and show:
+
+| Field | Validated value |
+| --- | --- |
+| Authentication | Microsoft Entra ID User Login |
+| Foundry project | `https://aif-brl2ihmwze6og.services.ai.azure.com/api/projects/muni-deal-desk` |
+| Intended agent | `municipal-deal-desk-orchestrator:4` |
+
+Point to the banner:
+
+> Connection creation/edit of Azure AI Foundry Agent Service has been blocked by Data
+> Loss Prevention (DLP) policy `Personal Developer - (default)`.
+
+Say: *"This is design-time governance working before data can cross a platform
+boundary. Copilot Studio discovered the supported Foundry connector and accepted the
+project endpoint, but this personal developer environment is not authorized to create
+that connection. We did not weaken the policy or route around it."*
+
+Then state the unvalidated continuation, using conditional language:
+
+1. A Power Platform administrator provides a dedicated sandbox or scoped policy where
+   Azure AI Foundry Agent Service and the Teams/Microsoft 365 channel are allowed in
+   compatible data groups.
+2. The maker creates the Entra-authenticated Foundry connection, selects orchestrator
+   v4, and verifies citations, the approval pause and final response in test chat.
+3. Only after that test passes does the maker publish the Copilot Studio wrapper and add
+   the Teams and Microsoft 365 channel.
+
+Be explicit about what this proves and what it does not:
+
+- **Proved:** the intended connector exists; the correct endpoint is known; tenant DLP
+  blocks connection creation in this environment.
+- **Not proved:** Copilot Studio invoked v4, citations survived the connected-agent
+  handoff, the approval checkpoint rendered, or Teams returned an answer.
+- **Not acceptable as a bypass:** A2A, MCP, HTTP and custom connectors are also governed
+  by Power Platform policy and would change the architecture without satisfying the
+  blocked direct-connector acceptance criterion.
+
+If asked about the Foundry **Publish to Teams and Microsoft 365** wizard, say that a
+separate direct publication surface was discovered and `Microsoft.BotService` was
+registered, but no Azure Bot resource or Teams application was created and that path
+was not validated. Keep it out of the critical walkthrough.
+
 ## Why Foundry for this solution?
 
 Close by connecting platform capabilities to requirements already shown.
@@ -702,6 +754,7 @@ Leave with owners for a business-workflow session and an architecture/security s
 | App does not stream | Use the hosted orchestrator playground and explain the same stages |
 | Live run is cold or slow | Explain the resources/corpus, then return to the completed run |
 | Portal is slow | Use the fallback recording and corresponding VS Code artifact |
+| Copilot Studio connector is blocked | Show the DLP banner as the planned governance coda; do not troubleshoot or bypass it live |
 | Private Blob cannot open from laptop | Expected; show inventory receipt and IQ count |
 | Agent returns an error | Open a prior trace/evaluation; do not debug live |
 | Asked about OBO | Not implemented; describe it as the stronger production path |

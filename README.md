@@ -39,6 +39,7 @@ a model switch, a compliance check and a human gate.
 | Agents | Complete | Three prompt specialists and native Foundry Hosted orchestrator v4 |
 | Evaluations | Complete | 25-case local/portal gate and two-model comparison |
 | Tracing and observability | Complete for demo | Workflow spans, branch-aware SSE status streaming and portal evaluation runs |
+| Copilot Studio / Teams | Blocked externally | Supported Foundry connector found; tenant DLP blocks connection creation |
 | BYO memory / Cosmos DB | Not implemented | Platform-managed state only; documented production option |
 | Fine-tuning | Not used | Evaluation-first baseline retained for a future candidate |
 

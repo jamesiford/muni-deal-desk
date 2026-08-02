@@ -34,8 +34,12 @@ resource group were removed.
 - Promoted experience: branch-aware granular SSE statuses, active spinners and GFM
   table rendering pass all local checks and a native v4 cloud invocation. Superseded v3
   was removed after v4 passed approval-resume validation.
-- Next roadmap phase: Phase 9, Copilot Studio/Teams. Phase 11 fallback recording is
-  pending and may proceed in parallel.
+- Phase 9 status: the Copilot Studio Azure AI Foundry Agent Service connector was found
+  and configured with the correct project endpoint, but DLP policy
+  `Personal Developer - (default)` blocks connection creation. The user cannot change
+  policy or create another environment. Do not claim Teams/Copilot Studio integration
+  works and do not build an A2A/MCP/HTTP bypass unless the user explicitly reopens the
+  architecture. Phase 11 fallback recording is the next actionable phase.
 
 Do not recreate retired resources, superseded agent versions, failed evaluation
 definitions or temporary evaluation agents. Preserve the final evaluation and its two
