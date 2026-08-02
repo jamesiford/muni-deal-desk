@@ -3,6 +3,10 @@
 A Microsoft Foundry demonstration solution: a new-issue **Deal Desk** agent for a
 public finance broker-dealer desk.
 
+The application is branded **Zava Securities**, a fictional broker-dealer created for
+this synthetic demonstration. The brand, issuers, documents, figures and internal
+pricing records do not represent a real firm or real municipal securities activity.
+
 The solution exists to make Foundry platform capabilities visible and explainable in a
 customer technical session. Infrastructure, synthetic corpus, Foundry IQ, MCP, prompt
 agents, hosted orchestration, evaluations and the banker-facing front door are complete.
@@ -29,21 +33,21 @@ a model switch, a compliance check and a human gate.
 | Model choice | Deployed | Extraction, reasoning, router and embedding deployments |
 | Governance | Implemented for current paths | Source separation, sensitivity labels and withheld counts |
 | Guardrails | Complete | Model review plus deterministic blocking and typed human approval |
-| Agents | Complete | Three prompt specialists and native Foundry Hosted orchestrator v3 |
+| Agents | Complete | Three prompt specialists and native Foundry Hosted orchestrator v4 |
 | Evaluations | Complete | 25-case local/portal gate and two-model comparison |
 | Tracing and observability | Complete for demo | Workflow spans, branch-aware SSE status streaming and portal evaluation runs |
 | BYO memory / Cosmos DB | Not implemented | Platform-managed state only; documented production option |
 | Fine-tuning | Not used | Evaluation-first baseline retained for a future candidate |
 
-The current promotion candidate adds active spinners, fine-grained multi-agent/tool/
-knowledge status messages, parallel-branch status arbitration, and GitHub-Flavored
-Markdown table rendering. It passed the complete local test/build gate and is approved
-for promotion; hosted orchestrator v3 remains the active Azure version until deployment
-validation and promotion complete.
+The promoted front door and orchestrator add active spinners, fine-grained multi-agent/
+tool/knowledge status messages, parallel-branch status arbitration, and GitHub-Flavored
+Markdown table rendering. Hosted orchestrator v4 passed the complete local gate and a
+native cloud invocation with 21 status events, approval checkpoint and approved final.
 
 ## Demo narrative
 
-The presenter runbook explains the municipal Deal Desk, public finance broker-dealer audiences,
+The presenter runbook explains the fictional Zava Securities Deal Desk, the relevant
+public finance broker-dealer audiences,
 personas, prompt terminology, call provisions, private precedent value, every deployed
 Azure service, all four document types, and the complete Foundry Home/Discover/Build/
 Operate walkthrough. See [docs/demo-runbook.md](docs/demo-runbook.md).

@@ -13,7 +13,7 @@ validated.
 | --- | --- | --- |
 | 1-6 | Complete | Infrastructure, corpus, IQ, MCP, prompt agents and hosted workflow |
 | 7 and 7A | Complete | Private-storage evaluation path and final 25-case two-model runs |
-| 8 | Complete | Local customer-branded React/FastAPI presentation front door |
+| 8 | Complete | Local fictional Zava Securities React/FastAPI presentation front door |
 | 9 | **Next** | Publish the orchestrator through Copilot Studio into Teams |
 | 10 | Complete | Presenter runbook and end-to-end rehearsal |
 | 11 | Pending | Record and store the fallback walkthrough |
@@ -343,7 +343,7 @@ its first stage at 8 seconds, streamed 14 evidence sources and six citations by 
 seconds, reached approval at 146 seconds, and rendered `Approved` after resume. The
 public persona returned 11 sources, explicit withholding disclosure and no `PM-*`
 records; the deal-team persona returned 14. A fiduciary/investor-recommendation request
-returned a blocked final with no approval bar. Light/dark themes, customer branding and
+returned a blocked final with no approval bar. Light/dark themes, Zava Securities branding and
 the 40px prompt action pass desktop browser checks without horizontal overflow.
 
 **Approved promotion candidate (1 August 2026):** the local front door now renders
@@ -352,7 +352,13 @@ and shows fine-grained orchestration, specialist, MCP, Foundry IQ, calculator, s
 control and approval statuses. Statuses carry their owning stage, so completion of the
 parallel calculator branch cannot overwrite a still-active Research status. The exact
 race was reproduced and passed in browser automation at desktop and mobile widths; all
-95 tests, Ruff and the production frontend build pass. Azure promotion is the next step.
+95 tests, Ruff and the production frontend build pass.
+
+**Promotion validation (1 August 2026):** hosted orchestrator v4 is active with Python
+3.14 and Invocations 2.0.0. A native cloud run emitted 21 granular statuses across all
+five owned stages, showed the calculator completing while Research remained active,
+paused for supervising-principal approval, resumed from checkpoint and returned an
+approved three-section answer. Superseded v3 was removed after validation.
 
 ## Phase 9 — Copilot Studio surface
 

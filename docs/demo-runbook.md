@@ -16,11 +16,12 @@ Microsoft Foundry implement it.
 | Region | `westus3` |
 | Foundry account | `aif-brl2ihmwze6og` |
 | Foundry project | `muni-deal-desk` |
-| Hosted orchestrator | `municipal-deal-desk-orchestrator`, version 3 |
+| Hosted orchestrator | `municipal-deal-desk-orchestrator`, version 4 |
 | Final evaluation | `eval_b23afc8b99554c30a7c8af566abb375d` |
 
 > **Accuracy boundary.** All issuers, documents, figures and deal-team records are
-> synthetic. Nothing was retrieved from MSRB EMMA. The persona switch demonstrates
+> synthetic. Zava Securities is a fictional broker-dealer brand used only for this
+> demonstration; it is not a customer company. Nothing was retrieved from MSRB EMMA. The persona switch demonstrates
 > physical source separation plus application-level group filtering, not end-to-end
 > on-behalf-of authorization. The conduct controls are modelled on regulatory
 > obligations; they do not certify compliance or provide legal advice.
@@ -68,8 +69,8 @@ Open `http://127.0.0.1:8080`. Keep that shell running throughout the walkthrough
 
 ### What is this application?
 
-The Municipal Deal Desk is a new-issue intelligence assistant for a public finance
-broker-dealer desk. It helps a banker prepare an issuer-facing response by finding
+The Zava Securities Municipal Deal Desk is a new-issue intelligence assistant for a
+fictional public finance broker-dealer desk. It helps a banker prepare an issuer-facing response by finding
 comparable municipal bond issues, comparing structures, identifying disclosure facts
 that could affect pricing, and drafting a cited market summary for review.
 
@@ -98,6 +99,10 @@ conflicting facts, and producing something a supervisor can review.
 
 ### Who at customer would care?
 
+Zava Securities is the fictional firm represented in the application. customer organization
+is the real customer audience for this session; using separate names prevents synthetic
+internal pricing records from appearing to belong to customer.
+
 The direct business fit is **public finance broker-dealer**, customer organization' broker-dealer, not
 the mortgage or commercial-banking businesses.
 
@@ -116,7 +121,7 @@ across business units. commercial bank and mortgage business are not the primary
 this municipal workflow, although the platform pattern can transfer to their regulated,
 document-heavy processes.
 
-### The two demo personas
+### The two Zava demo personas
 
 These are fixed presentation personas mapped to explicit application claims. They are
 not a claim that the end user's Entra token reaches every source.
@@ -315,7 +320,7 @@ azd up --environment demo-vnet
 That command provisions Bicep, applies RBAC, verifies both chat model tiers, generates
 the corpus, uploads exactly 11 public PDFs through the private endpoint, reconciles
 Foundry IQ and Content Understanding, registers specialists, runs a private-storage
-evaluation smoke, deploys MCP and hosted orchestrator version 3, then runs contract
+  evaluation smoke, deploys MCP and the next immutable hosted orchestrator version, then runs contract
 smokes.
 
 ### The document corpus
@@ -401,7 +406,7 @@ Open **Build > Agents**. Four durable agents should be visible.
 | `municipal-deal-research` v1 | Prompt agent | `gpt-5.4-mini` | Candidate lookup plus cited public retrieval; reports gaps |
 | `municipal-deal-analyst` v1 | Prompt agent | `gpt-5.5` | Uses deal/debt-service tools and explains structures |
 | `municipal-deal-compliance` v1 | Prompt agent | `gpt-5.4-mini` | Structured model review for conduct and human review |
-| `municipal-deal-desk-orchestrator` v3 | Hosted workflow | Mixed | Plans, invokes, synthesizes, controls and pauses for approval |
+| `municipal-deal-desk-orchestrator` v4 | Hosted workflow | Mixed | Plans, invokes, streams branch-aware status, controls and pauses for approval |
 
 Open Research. Show its instructions, tools and structured `ResearchFindings` format.
 Point out its two connections: custom MCP for candidates and Foundry IQ for public
@@ -613,7 +618,7 @@ Move to **Operate**. Portal labels may evolve, but cover these responsibilities:
 | Surface | What to say |
 | --- | --- |
 | Overview | Success, latency, token and cost trends turn one run into an operated workload |
-| Assets | Inventory answers which agents and versions exist; only orchestrator v3 remains active |
+| Assets | Inventory answers which agents and versions exist; only orchestrator v4 remains active |
 | Compliance | Connect posture to enterprise governance; do not claim Purview or Agent ID integration |
 | Quota | Capacity and throughput are dependencies; PTU is a future option, not used here |
 | Admin | Project access, connections and configuration are governed apart from prompts |

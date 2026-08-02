@@ -53,10 +53,12 @@ run unmodified.
 Apps behind its Invocations host. The fallback was exercised during development, then
 removed after native direct-code hosting passed. No fallback ACA or image remains.
 
-**Validation:** Foundry Hosted Agent `municipal-deal-desk-orchestrator` version 3 is
-active and portal-visible. A typed `DealDeskRequest` paused for a typed supervising-
-principal decision and resumed to a valid `DealDeskAnswer`. Application Insights shows
-planner, Research, Analyst, synthesis, Compliance, guardrail and approval spans.
+**Validation:** Foundry Hosted Agent `municipal-deal-desk-orchestrator` version 4 is
+active and portal-visible. A typed `DealDeskRequest` emitted 21 operational status
+events across orchestration, Research, Analyst, MCP, Foundry IQ, calculation, synthesis
+and controls, paused for a typed supervising-principal decision, then resumed to a valid
+`DealDeskAnswer`. Application Insights shows planner, Research, Analyst, synthesis,
+Compliance, guardrail and approval spans.
 
 ## Consequences
 

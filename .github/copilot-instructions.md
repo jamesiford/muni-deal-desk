@@ -20,15 +20,17 @@ Phases 1-8, 7A and 10 are complete in azd environment `demo-vnet`, resource grou
 resource group were removed.
 
 - Prompt specialists: Research v1, Analyst v1, Compliance v1.
-- Hosted orchestrator: `municipal-deal-desk-orchestrator` v3, Invocations 2.0.0.
+- Hosted orchestrator: `municipal-deal-desk-orchestrator` v4, Invocations 2.0.0.
 - Foundry IQ: 11 public PDFs; three private `PM-*` records remain manifest-only.
 - Final evaluation: both mini and reasoning configurations passed 25/25 portal rows,
   with zero failed and zero errored rows.
 - Front door: React/Vite output served by local FastAPI. It is not an Azure service.
   `azure.yaml` deploys only MCP and the hosted orchestrator.
-- Approved promotion candidate: branch-aware granular SSE statuses, active spinners and
-  GFM table rendering pass all local checks. Hosted v3 remains active until Azure
-  deployment validation and promotion complete.
+- Presentation brand: Zava Securities is fictional. customer is the customer audience,
+  not the owner or source of any synthetic issuer, document or private pricing record.
+- Promoted experience: branch-aware granular SSE statuses, active spinners and GFM
+  table rendering pass all local checks and a native v4 cloud invocation. Superseded v3
+  was removed after v4 passed approval-resume validation.
 - Next roadmap phase: Phase 9, Copilot Studio/Teams. Phase 11 fallback recording is
   pending and may proceed in parallel.
 

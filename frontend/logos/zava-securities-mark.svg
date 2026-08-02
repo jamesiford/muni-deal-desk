@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title id="title">Zava Securities</title>
+  <rect width="60" height="60" x="2" y="2" rx="9" fill="#15353b"/>
+  <path d="M15 18h34L26 43h23" fill="none" stroke="#ffffff" stroke-width="7" stroke-linecap="square" stroke-linejoin="miter"/>
+  <path d="M15 49h34" stroke="#35a49a" stroke-width="4"/>
+</svg>

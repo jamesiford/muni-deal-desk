@@ -17,8 +17,8 @@ import {
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import customerColorLogo from "../logos/customerholdings-color-logo.png";
-import customerWhiteLogo from "../logos/customerholdings-white-logo.png";
+import zavaColorLogo from "../logos/zava-securities-color-logo.svg";
+import zavaWhiteLogo from "../logos/zava-securities-white-logo.svg";
 import { startRun, submitApproval } from "./api/stream.js";
 
 const QUESTION =
@@ -333,9 +333,9 @@ export default function App() {
     <div className="app-shell">
       <header>
         <div className="brand">
-          <img className="brand-logo brand-logo-light" src={customerColorLogo} alt="customer organization" />
-          <img className="brand-logo brand-logo-dark" src={customerWhiteLogo} alt="customer organization" />
-          <div className="product-name"><strong>Municipal Deal Desk</strong><small>New-issue intelligence</small></div>
+          <img className="brand-logo brand-logo-light" src={zavaColorLogo} alt="Zava Securities" />
+          <img className="brand-logo brand-logo-dark" src={zavaWhiteLogo} alt="Zava Securities" />
+          <div className="product-name"><strong>Municipal Deal Desk</strong><small>Synthetic public finance demonstration</small></div>
         </div>
         <div className="header-actions">
           <IdentitySwitcher value={identity} disabled={running || Boolean(approval)} onChange={setIdentity} />

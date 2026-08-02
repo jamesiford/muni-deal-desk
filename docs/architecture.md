@@ -123,7 +123,9 @@ landing zone pattern and must not be presented as one. See
 - Content Understanding extraction matches the manifest for all 14 generated PDFs
 - Research v1 calls both `find_comparable_deals` and `knowledge_base_retrieve`
 - MCP endpoint lists and calls its three typed tools over streamable HTTP
-- Hosted orchestrator v3 is active with Invocations 2.0.0 and a dedicated agent identity
+- Hosted orchestrator v4 is active with Invocations 2.0.0 and a dedicated agent identity
+- Native v4 SSE emits stage-owned orchestration, agent, MCP, Foundry IQ, calculator,
+  synthesis, control and approval statuses without exposing chain-of-thought
 - Final mini and reasoning portal evaluations each passed 25/25 rows with zero errors
 - Deal-team and public-side runs return 14 and 11 sources respectively, with an explicit
     three-record withheld disclosure for the public-side caller
