@@ -346,6 +346,11 @@ records; the deal-team persona returned 14. A fiduciary/investor-recommendation 
 returned a blocked final with no approval bar. Light/dark themes, Zava Securities branding and
 the 40px prompt action pass desktop browser checks without horizontal overflow.
 
+**Palette validation (1 August 2026):** both themes now derive from the Zava logo's deep
+teal, aqua and cool-gray visual system. Red and amber remain semantic danger/warning
+colors rather than brand accents. Primary-button contrast is 5.62:1 in light mode and
+8.93:1 in dark mode; desktop and 390px mobile browser checks show no horizontal overflow.
+
 **Approved promotion candidate (1 August 2026):** the local front door now renders
 GitHub-Flavored Markdown tables, spins the Run control and each active workflow stage,
 and shows fine-grained orchestration, specialist, MCP, Foundry IQ, calculator, synthesis,

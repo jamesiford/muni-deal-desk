@@ -6,6 +6,9 @@ public finance broker-dealer desk.
 The application is branded **Zava Securities**, a fictional broker-dealer created for
 this synthetic demonstration. The brand, issuers, documents, figures and internal
 pricing records do not represent a real firm or real municipal securities activity.
+Its visual system follows the fictional logo: deep teal and aqua for identity,
+interaction and workflow progress; cool gray for operational surfaces; and red/amber
+reserved for danger and warning states.
 
 The solution exists to make Foundry platform capabilities visible and explainable in a
 customer technical session. Infrastructure, synthetic corpus, Foundry IQ, MCP, prompt

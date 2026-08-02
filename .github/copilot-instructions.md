@@ -28,6 +28,9 @@ resource group were removed.
   `azure.yaml` deploys only MCP and the hosted orchestrator.
 - Presentation brand: Zava Securities is fictional. customer is the customer audience,
   not the owner or source of any synthetic issuer, document or private pricing record.
+- Zava palette: deep teal `#15353b`, aqua `#35a49a` and cool gray `#52666a` define the
+  brand. Use teal/aqua for primary interaction and progress; reserve red/amber for
+  semantic danger and warning states. Preserve light/dark contrast and mobile fit.
 - Promoted experience: branch-aware granular SSE statuses, active spinners and GFM
   table rendering pass all local checks and a native v4 cloud invocation. Superseded v3
   was removed after v4 passed approval-resume validation.

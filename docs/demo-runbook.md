@@ -21,10 +21,11 @@ Microsoft Foundry implement it.
 
 > **Accuracy boundary.** All issuers, documents, figures and deal-team records are
 > synthetic. Zava Securities is a fictional broker-dealer brand used only for this
-> demonstration; it is not a customer company. Nothing was retrieved from MSRB EMMA. The persona switch demonstrates
-> physical source separation plus application-level group filtering, not end-to-end
-> on-behalf-of authorization. The conduct controls are modelled on regulatory
-> obligations; they do not certify compliance or provide legal advice.
+> demonstration; it is not a customer company. Nothing was retrieved from MSRB EMMA. The
+> persona switch demonstrates physical source separation plus application-level group
+> filtering, not end-to-end on-behalf-of authorization. The conduct controls are
+> modelled on regulatory obligations; they do not certify compliance or provide legal
+> advice.
 
 ## Session shape
 
@@ -70,9 +71,9 @@ Open `http://127.0.0.1:8080`. Keep that shell running throughout the walkthrough
 ### What is this application?
 
 The Zava Securities Municipal Deal Desk is a new-issue intelligence assistant for a
-fictional public finance broker-dealer desk. It helps a banker prepare an issuer-facing response by finding
-comparable municipal bond issues, comparing structures, identifying disclosure facts
-that could affect pricing, and drafting a cited market summary for review.
+fictional public finance broker-dealer desk. It helps a banker prepare an issuer-facing
+response by finding comparable municipal bond issues, comparing structures, identifying
+disclosure facts that could affect pricing, and drafting a cited market summary for review.
 
 It does not decide whether an investor should buy a bond, provide legal advice, replace
 a banker, or approve client communication. It accelerates evidence assembly and first
@@ -264,6 +265,11 @@ The branded interface is React 19 and Vite in plain JSX. A small FastAPI bridge 
 selected presentation persona to typed claims and streams the hosted agent's Invocations
 events over SSE. It contains no pricing, entitlement or compliance logic. Those rules
 live behind the application mediator and are shared by the hosted workflow and MCP.
+
+The visual system follows the fictional Zava logo: deep teal and aqua identify primary
+actions, focus and live workflow progress; cool grays organize the operational surface;
+red and amber are reserved for blocked/error and warning states. Both light and dark
+themes retain accessible primary-action contrast.
 
 ## Part 2 - Azure resource group and corpus
 
