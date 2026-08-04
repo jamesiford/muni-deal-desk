@@ -1,7 +1,6 @@
 # Municipal Deal Desk demo runbook
 
-customer organization and Microsoft Foundry technical session. Monday 3 August 2026,
-08:00 PDT.
+Reusable presenter guide for a Microsoft Foundry technical session.
 
 This is the presenter narrative, not just a click path. It explains the municipal
 business problem first, shows the application second, and then reveals how Azure and
@@ -21,11 +20,11 @@ Microsoft Foundry implement it.
 
 > **Accuracy boundary.** All issuers, documents, figures and deal-team records are
 > synthetic. Zava Securities is a fictional broker-dealer brand used only for this
-> demonstration; it is not a customer company. Nothing was retrieved from MSRB EMMA. The
-> persona switch demonstrates physical source separation plus application-level group
-> filtering, not end-to-end on-behalf-of authorization. The conduct controls are
-> modelled on regulatory obligations; they do not certify compliance or provide legal
-> advice.
+> demonstration and is not associated with any real company or customer. Nothing was
+> retrieved from MSRB EMMA. The persona switch demonstrates physical source separation
+> plus application-level group filtering, not end-to-end on-behalf-of authorization. The
+> conduct controls are modelled on regulatory obligations; they do not certify
+> compliance or provide legal advice.
 
 ## Session shape
 
@@ -114,16 +113,16 @@ writing a paragraph. It is joining evidence from several document types, applyin
 permission boundaries, calculating figures consistently, surfacing missing or
 conflicting facts, and producing something a supervisor can review.
 
-### Who at customer would care?
+### Who would care?
 
-Zava Securities is the fictional firm represented in the application. customer organization
-is the real customer audience for this session; using separate names prevents synthetic
-internal pricing records from appearing to belong to customer.
+Zava Securities is the fictional firm represented in the application. It is not
+associated with any real company or customer, and no real organization supplied the
+synthetic internal pricing records.
 
-The direct business fit is **public finance broker-dealer**, customer organization' broker-dealer, not
-the mortgage or commercial-banking businesses.
+The direct business fit is a public finance broker-dealer and its control and technology
+functions.
 
-| public finance broker-dealer audience | Why this matters |
+| Broker-dealer audience | Why this matters |
 | --- | --- |
 | Public Finance bankers | Faster comparable research and RFP market-summary drafting |
 | Municipal underwriting and syndicate | Consistent structure, call and precedent comparison before pricing |
@@ -132,11 +131,10 @@ the mortgage or commercial-banking businesses.
 | Supervising principals, Compliance, Legal and Risk | Reviewable controls, source lineage, approval and traces |
 | Technology, Data and AI platform teams | Governed agents, knowledge, tools, evaluation and operations |
 
-At the customer organization level, enterprise technology, cyber, risk, records-management
-and model-governance leaders would care about operating this pattern consistently
-across business units. commercial bank and mortgage business are not the primary users of
-this municipal workflow, although the platform pattern can transfer to their regulated,
-document-heavy processes.
+Enterprise technology, cyber, risk, records-management and model-governance leaders
+would care about operating this pattern consistently across business units. The
+platform pattern can transfer to other regulated, document-heavy processes even though
+they are not the primary users of this municipal workflow.
 
 ### The two Zava demo personas
 

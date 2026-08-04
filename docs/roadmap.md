@@ -1,6 +1,6 @@
 # Build roadmap
 
-Target: **Monday 3 August 2026, 08:00 PDT** — customer organization Foundry session.
+Target: reusable Microsoft Foundry technical demonstration.
 
 This document is the contract between work surfaces. It is written so that the build can
 be picked up in VS Code, in a chat assistant, or by another engineer, without re-deriving

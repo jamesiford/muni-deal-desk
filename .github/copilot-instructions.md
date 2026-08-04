@@ -26,8 +26,9 @@ resource group were removed.
   with zero failed and zero errored rows.
 - Front door: React/Vite output served by local FastAPI. It is not an Azure service.
   `azure.yaml` deploys only MCP and the hosted orchestrator.
-- Presentation brand: Zava Securities is fictional. customer is the customer audience,
-  not the owner or source of any synthetic issuer, document or private pricing record.
+- Presentation brand: Zava Securities is fictional and is not associated with any real
+  company or customer. No real organization owns or supplied any synthetic issuer,
+  document or private pricing record.
 - Zava palette: deep teal `#15353b`, aqua `#35a49a` and cool gray `#52666a` define the
   brand. Use teal/aqua for primary interaction and progress; reserve red/amber for
   semantic danger and warning states. Preserve light/dark contrast and mobile fit.

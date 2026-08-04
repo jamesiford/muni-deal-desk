@@ -51,10 +51,10 @@ native cloud invocation with 21 status events, approval checkpoint and approved 
 ## Demo narrative
 
 The presenter runbook explains the fictional Zava Securities Deal Desk, the relevant
-public finance broker-dealer audiences,
-personas, prompt terminology, call provisions, private precedent value, every deployed
-Azure service, all four document types, and the complete Foundry Home/Discover/Build/
-Operate walkthrough. See [docs/demo-runbook.md](docs/demo-runbook.md).
+broker-dealer audiences, personas, prompt terminology, call provisions, private
+precedent value, every deployed Azure service, all four document types, and the complete
+Foundry Home/Discover/Build/Operate walkthrough. See
+[docs/demo-runbook.md](docs/demo-runbook.md).
 
 Supporting detail:
 
