@@ -27,6 +27,7 @@ jobs:
       - run: python -m pip install -r requirements-dev.txt
       - run: python -m ruff check .
       - run: python -m ruff format --check .
+      - run: python -m src.corpus.generate
       - run: python -m pytest tests/unit tests/integration -q
       - run: python -m evals.runner --local-only --environment ci
       - run: npm ci --prefix frontend
