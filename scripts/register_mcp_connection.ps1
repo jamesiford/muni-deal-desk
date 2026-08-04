@@ -1,7 +1,7 @@
 #Requires -Version 7.0
 [CmdletBinding()]
 param(
-    [string] $Environment = 'demo',
+    [string] $Environment = 'demo-vnet',
     [string] $ConnectionName = 'muni-deal-desk-mcp',
     [string] $Endpoint,
     [string] $ProjectEndpoint

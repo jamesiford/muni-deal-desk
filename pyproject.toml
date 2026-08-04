@@ -19,7 +19,7 @@ dependencies = [
     "openai==2.31.0",
     "pydantic==2.13.0",
     "pydantic-settings==2.13.1",
-    "reportlab>=4.2.0",
+    "reportlab==5.0.0",
     "uvicorn==0.40.0",
 ]
 
@@ -27,7 +27,12 @@ dependencies = [
 # Prerelease. Pinned and isolated so a fallback to a container host does not
 # require touching the core dependency set. See docs/decisions/0002-hosted-workflow-agent.md
 hosting = ["agent-framework-foundry-hosting==1.0.0a260604"]
-dev = ["pytest==9.0.2", "pytest-asyncio==1.3.0", "ruff>=0.9.0"]
+dev = [
+    "agent-framework-foundry-hosting==1.0.0a260604",
+    "pytest==9.0.2",
+    "pytest-asyncio==1.3.0",
+    "ruff==0.16.1",
+]
 
 [tool.ruff]
 line-length = 100

@@ -1,7 +1,7 @@
 #Requires -Version 7.0
 [CmdletBinding()]
 param(
-    [string] $Environment = 'demo',
+    [string] $Environment = 'demo-vnet',
     [string] $ConnectionName = 'municipal-deal-foundry-iq',
     [string] $KnowledgeBaseName = 'municipal-deal-knowledge-base',
     [string] $SearchEndpoint,

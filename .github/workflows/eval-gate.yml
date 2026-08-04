@@ -16,7 +16,7 @@ on:
       environment:
         description: GitHub and azd environment name
         required: true
-        default: demo
+        default: demo-vnet
         type: string
 
 permissions:

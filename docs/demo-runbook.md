@@ -71,7 +71,7 @@ Launch the local front door from a fresh PowerShell session:
 
 ```powershell
 azd env select demo-vnet
-npm install --prefix frontend
+npm ci --prefix frontend
 npm run build --prefix frontend
 azd env get-values --environment demo-vnet | ForEach-Object {
   if ($_ -match '^([^=]+)="(.*)"$') { Set-Item "Env:$($matches[1])" $matches[2] }

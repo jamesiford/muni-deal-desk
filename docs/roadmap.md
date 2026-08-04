@@ -43,8 +43,7 @@ cut from the list in "What to cut, in order" rather than compressing rehearsal.
 **Status:** complete
 **Blocks:** everything
 
-Bicep deployed into `westus3`, subscription `non-production Azure subscription`
-(`subscription-id-redacted`).
+Bicep deployed into `westus3` in a non-production Azure subscription.
 
 `eastus2` was the original target and failed with `InsufficientResourcesAvailable` on
 Azure AI Search. `westus3` carries all four model versions at identical SKUs, so the

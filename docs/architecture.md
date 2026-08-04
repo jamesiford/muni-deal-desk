@@ -2,7 +2,7 @@
 
 ## Deployed environment
 
-Provisioned by `azd up` into `westus3`, subscription `non-production Azure subscription`.
+The validated reference deployment was provisioned by `azd up` into `westus3`.
 
 | Component | Purpose |
 | --- | --- |

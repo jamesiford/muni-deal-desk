@@ -38,9 +38,10 @@ The Invocations protocol is chosen over Responses for the orchestrator.
 repository rules require an exact version, a limitation, a fallback and a validation
 step for any prerelease dependency.
 
-**Exact version:** `agent-framework-foundry-hosting==1.0.0a260604`, isolated in the
-`hosting` optional dependency group so the core dependency set is unaffected by a
-change to the hosting path.
+**Exact version:** `agent-framework-foundry-hosting==1.0.0a260604`, declared in the
+`hosting` optional dependency group and repeated in `dev` so the documented development
+install can import and test the hosted orchestrator. The core dependency set remains
+unaffected by a change to the hosting path.
 
 **Limitation:** The published Agent Framework sample for hosted agents imports
 `azure.ai.agentserver.agentframework`. That distribution is not available on PyPI as of

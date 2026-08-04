@@ -116,20 +116,62 @@ same as end-to-end on-behalf-of enforcement. The distinction is documented in
 The conduct policies are modelled on MSRB Rule G-17, MSRB Rule G-42 and FINRA
 Regulatory Notice 24-09. They do not certify compliance with any of them.
 
+## Prerequisites
+
+- Python 3.14 and PowerShell 7
+- Node.js 22.12 or later and npm
+- [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli) and
+  [Azure Developer CLI](https://learn.microsoft.com/azure/developer/azure-developer-cli/install-azd)
+- An Azure subscription where all four model versions in `infra/main.bicep` are
+  available in the selected region, with sufficient model quota
+- Permission to create subscription/resource-group resources and role assignments. A
+  typical deployment identity needs `Contributor` plus `Role Based Access Control
+  Administrator` at subscription scope; runtime identities receive narrower roles from
+  Bicep
+- Network access to PyPI, npm, Microsoft Container Registry and Azure management/data
+  endpoints
+
+The hosted-agent azd extension is declared in `azure.yaml`; azd installs a compatible
+version when the project runs. The MCP and private uploader images use Azure remote
+builds, so Docker Desktop is optional for the supported `azd up` path.
+
 ## Getting started
 
+Clone the repository, open PowerShell 7 at its root and install the pinned development
+dependencies:
+
 ```powershell
+python --version # must report 3.14.x
+python -m venv .venv
+./.venv/Scripts/Activate.ps1
+python -m pip install --upgrade pip
 python -m pip install -e ".[dev]"
 ./scripts/generate_corpus.ps1
 python -m pytest tests/unit      # passes without Azure credentials
 python -m ruff check .
 ```
 
-Provision and deploy the complete hybrid demo environment with one command:
+Sign in to both CLIs. Confirm that `az account show` reports the subscription you intend
+to use; the deployment creates billable model, Search, Container Apps and monitoring
+resources.
+
+```powershell
+az login
+azd auth login
+az account show --output table
+```
+
+Provision and deploy the complete hybrid demo environment. On a new environment, azd
+prompts for a subscription and region; `westus3` is the validated reference region, but
+the pre-provision hook verifies the selected region before creating resources.
 
 ```powershell
 azd up --environment demo-vnet
 ```
+
+The deployment is idempotent, but not tenant-agnostic with respect to policy: Azure
+Policy, denied resource providers, unavailable model versions/quota, or missing role-
+assignment permission will stop the run with a pre-provision or ARM error.
 
 The Foundry portal remains public and Entra-protected for the walkthrough. Foundry
 outbound evaluation traffic is VNet-injected into private Blob storage; Search uses a
@@ -143,7 +185,7 @@ Run the complete demo from a fresh shell after `azd up`:
 
 ```powershell
 azd env select demo-vnet
-npm install --prefix frontend
+npm ci --prefix frontend
 npm run build --prefix frontend
 azd env get-values --environment demo-vnet | ForEach-Object {
   if ($_ -match '^([^=]+)="(.*)"$') { Set-Item "Env:$($matches[1])" $matches[2] }
@@ -154,6 +196,17 @@ python -m src.hosts.front_door
 Open `http://127.0.0.1:8080`. The local FastAPI process serves `frontend/dist` and
 bridges browser SSE requests to the deployed hosted-agent endpoint. Stop it with
 `Ctrl+C` after the walkthrough.
+
+## Clean up
+
+The environment contains billable model deployments, Search, Container Apps and
+monitoring resources. Remove the selected azd environment when it is no longer needed:
+
+```powershell
+azd down --environment demo-vnet --purge --force
+```
+
+Review the target subscription and environment shown by azd before confirming cleanup.
 
 ## Validation
 

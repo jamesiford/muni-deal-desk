@@ -11,7 +11,7 @@
 #>
 [CmdletBinding()]
 param(
-    [string] $Environment = 'demo',
+    [string] $Environment = 'demo-vnet',
     [switch] $KeepResources
 )
 
